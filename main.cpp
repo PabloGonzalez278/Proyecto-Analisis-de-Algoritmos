@@ -14,7 +14,7 @@
 #endif
 
 enum Color { ROJO, AZUL, VERDE, AMARILLO, MORADO, NARANJA, AGUAMARINA, ROSA, NINGUNO };
-enum Tipo { NUMERO, PIERDE_TURNO, REVERSA, ROBA_DOS, FLIP, ROBA_CUATRO, COMODIN, COMODIN_ROBA_CUATRO };
+enum Tipo { NUMERO, PIERDE_TURNO, REVERSA, ROBA_UNO, FLIP, COMODIN, COMODIN_ROBA_DOS, ROBA_CINCO, SALTO_A_TODOS, ROBO_SALVAJE };
 
 bool modoOscuro = false;
 
@@ -73,11 +73,13 @@ std::string obtenerNombreTipo(Tipo tipo, int numero) {
         case NUMERO: return "Numero " + std::to_string(numero);
         case PIERDE_TURNO: return "Pierde Turno";
         case REVERSA: return "Reversa";
-        case ROBA_DOS: return "Roba Dos";
+        case ROBA_UNO: return "Roba Uno";
         case FLIP: return "Flip";
-        case ROBA_CUATRO: return "Roba Cuatro";
         case COMODIN: return "Comodin";
-        case COMODIN_ROBA_CUATRO: return "Comodin Roba Cuatro";
+        case COMODIN_ROBA_DOS: return "Comodin Roba Dos";
+        case ROBA_CINCO: return "Roba Cinco";
+        case SALTO_A_TODOS: return "Salto a Todos";
+        case ROBO_SALVAJE: return "Robo Salvaje";
         default: return "Desconocido";
     }
 }
@@ -104,16 +106,44 @@ std::vector<Carta> crearMazo() {
     std::vector<Carta> mazo;
     for (int c = ROJO; c <= AMARILLO; ++c) {
         for (int i = 0; i <= 9; ++i) {
-            mazo.push_back({{static_cast<Color>(c), NUMERO, i}, {static_cast<Color>(c + 4), NUMERO, i}, false});
+            mazo.push_back({
+                {static_cast<Color>(c), NUMERO, i},
+                {static_cast<Color>(c + 4), NUMERO, i},
+                false
+            });
         }
-        mazo.push_back({{static_cast<Color>(c), PIERDE_TURNO, -1}, {static_cast<Color>(c + 4), PIERDE_TURNO, -1}, false});
-        mazo.push_back({{static_cast<Color>(c), REVERSA, -1}, {static_cast<Color>(c + 4), REVERSA, -1}, false});
-        mazo.push_back({{static_cast<Color>(c), ROBA_DOS, -1}, {static_cast<Color>(c + 4), ROBA_DOS, -1}, false});
-        mazo.push_back({{static_cast<Color>(c), FLIP, -1}, {static_cast<Color>(c + 4), FLIP, -1}, false});
+        mazo.push_back({
+            {static_cast<Color>(c), PIERDE_TURNO, -1},
+            {static_cast<Color>(c + 4), SALTO_A_TODOS, -1},
+            false
+        });
+        mazo.push_back({
+            {static_cast<Color>(c), REVERSA, -1},
+            {static_cast<Color>(c + 4), REVERSA, -1},
+            false
+        });
+        mazo.push_back({
+            {static_cast<Color>(c), ROBA_UNO, -1},
+            {static_cast<Color>(c + 4), ROBA_CINCO, -1},
+            false
+        });
+        mazo.push_back({
+            {static_cast<Color>(c), FLIP, -1},
+            {static_cast<Color>(c + 4), FLIP, -1},
+            false
+        });
     }
     for (int i = 0; i < 4; ++i) {
-        mazo.push_back({{NINGUNO, COMODIN, -1}, {NINGUNO, COMODIN_ROBA_CUATRO, -1}, false});
-        mazo.push_back({{NINGUNO, COMODIN_ROBA_CUATRO, -1}, {NINGUNO, COMODIN, -1}, false});
+        mazo.push_back({
+            {NINGUNO, COMODIN, -1},
+            {NINGUNO, ROBO_SALVAJE, -1},
+            false
+        });
+        mazo.push_back({
+            {NINGUNO, COMODIN_ROBA_DOS, -1},
+            {NINGUNO, COMODIN, -1},
+            false
+        });
     }
     return mazo;
 }
@@ -124,21 +154,17 @@ void barajarMazo(std::vector<Carta>& mazo) {
     std::shuffle(mazo.begin(), mazo.end(), g);
 }
 
-// Función para verificar si una carta es jugable sobre otra, solo considerando color o número
 bool esCartaJugable(const Carta& cartaJugada, const Carta& cartaSuperior) {
     const Lado& ladoActualJugada = cartaJugada.estaVolteada ? cartaJugada.ladoOscuro : cartaJugada.ladoClaro;
     const Lado& ladoActualSuperior = cartaSuperior.estaVolteada ? cartaSuperior.ladoOscuro : cartaSuperior.ladoClaro;
 
-    // Permitir jugar si es un comodín
-    if (ladoActualJugada.tipo == COMODIN || ladoActualJugada.tipo == COMODIN_ROBA_CUATRO) {
+    if (ladoActualJugada.tipo == COMODIN || ladoActualJugada.tipo == COMODIN_ROBA_DOS) {
         return true;
     }
 
-    // Permitir jugar si coincide en color o número
     return ladoActualJugada.color == ladoActualSuperior.color ||
            (ladoActualJugada.tipo == NUMERO && ladoActualJugada.numero == ladoActualSuperior.numero);
 }
-
 
 Color seleccionarColor(bool ladoClaro) {
     int colorSeleccionado;
@@ -171,10 +197,10 @@ void voltearCarta(Carta& carta) {
 }
 
 void voltearTodasLasCartas(std::vector<Jugador>& jugadores, std::vector<Carta>& pilaDescarte) {
-    modoOscuro = !modoOscuro; // Toggle the global mode
+    modoOscuro = !modoOscuro;
     for (Jugador& jugador : jugadores) {
         for (Carta& carta : jugador.mano) {
-            carta.estaVolteada = modoOscuro; // Set all cards based on the new mode
+            carta.estaVolteada = modoOscuro;
         }
     }
     for (Carta& carta : pilaDescarte) {
@@ -184,20 +210,69 @@ void voltearTodasLasCartas(std::vector<Jugador>& jugadores, std::vector<Carta>& 
 
 void robarCarta(Jugador& jugador, std::vector<Carta>& mazo) {
     Carta cartaRobada = mazo.back();
-    cartaRobada.estaVolteada = modoOscuro; // Set the flipped status according to the current mode
+    cartaRobada.estaVolteada = modoOscuro;
     jugador.mano.push_back(cartaRobada);
     mazo.pop_back();
     std::cout << jugador.nombre << " ha robado una carta.\n";
 }
 
+void aplicarEfectoCartaEspecial(const Carta& cartaEspecial, int& indiceJugadorActual, std::vector<Jugador>& jugadores, std::vector<Carta>& mazo, bool& direccionNormal) {
+    int siguienteJugador = (indiceJugadorActual + (direccionNormal ? 1 : -1) + jugadores.size()) % jugadores.size();
+
+    switch (cartaEspecial.ladoClaro.tipo) {
+        case ROBA_UNO:
+            robarCarta(jugadores[siguienteJugador], mazo);
+            // Saltar el turno del siguiente jugador
+            indiceJugadorActual = siguienteJugador;
+            break;
+        case PIERDE_TURNO:
+            // Saltar el turno del siguiente jugador
+            indiceJugadorActual = siguienteJugador;
+            break;
+        case REVERSA:
+            direccionNormal = !direccionNormal;
+            break;
+        case COMODIN_ROBA_DOS:
+            robarCarta(jugadores[siguienteJugador], mazo);
+            robarCarta(jugadores[siguienteJugador], mazo);
+            // Saltar el turno del siguiente jugador
+            indiceJugadorActual = siguienteJugador;
+            break;
+        case ROBA_CINCO:
+               robarCarta(jugadores[siguienteJugador], mazo);
+               robarCarta(jugadores[siguienteJugador], mazo);
+               robarCarta(jugadores[siguienteJugador], mazo);
+               robarCarta(jugadores[siguienteJugador], mazo);
+               robarCarta(jugadores[siguienteJugador], mazo);
+            // Saltar el turno del siguiente jugador
+            indiceJugadorActual = siguienteJugador;
+            break;
+        case SALTO_A_TODOS:
+            // El jugador actual vuelve a jugar sin cambiar el Ã­ndice
+            break;
+        case ROBO_SALVAJE: {
+            Color colorElegido = seleccionarColor(!cartaEspecial.estaVolteada);
+            Carta& siguienteCarta = jugadores[siguienteJugador].mano.back();
+            while (siguienteCarta.ladoClaro.color != colorElegido) {
+                robarCarta(jugadores[siguienteJugador], mazo);
+                siguienteCarta = jugadores[siguienteJugador].mano.back();
+            }
+            // Saltar el turno del siguiente jugador
+            indiceJugadorActual = siguienteJugador;
+            break;
+        }
+        default:
+            break;
+    }
+}
+
 void imprimirCarta(const Carta& carta) {
     const Lado& ladoActual = carta.estaVolteada ? carta.ladoOscuro : carta.ladoClaro;
 
-    // Verificar si la carta es un comodín y tiene un color asignado
-    if ((ladoActual.tipo == COMODIN || ladoActual.tipo == COMODIN_ROBA_CUATRO) && ladoActual.color != NINGUNO) {
-        std::cout << "Color elegido para el comodín: " << obtenerNombreColor(ladoActual.color) << std::endl;
+    if ((ladoActual.tipo == COMODIN || ladoActual.tipo == COMODIN_ROBA_DOS) && ladoActual.color != NINGUNO) {
+        std::cout << "Color elegido para el comodÃ­n: " << obtenerNombreColor(ladoActual.color) << std::endl;
     } else {
-        if (ladoActual.tipo == COMODIN || ladoActual.tipo == COMODIN_ROBA_CUATRO) {
+        if (ladoActual.tipo == COMODIN || ladoActual.tipo == COMODIN_ROBA_DOS) {
             std::cout << obtenerNombreTipo(ladoActual.tipo, ladoActual.numero) << std::endl;
         } else {
             setColor(ladoActual.color);
@@ -205,6 +280,12 @@ void imprimirCarta(const Carta& carta) {
                       << obtenerNombreTipo(ladoActual.tipo, ladoActual.numero) << std::endl;
             resetColor();
         }
+    }
+}
+
+void mostrarCartasJugadores(const std::vector<Jugador>& jugadores) {
+    for (const Jugador& jugador : jugadores) {
+        std::cout << jugador.nombre << " tiene " << jugador.mano.size() << " cartas." << std::endl;
     }
 }
 
@@ -217,7 +298,7 @@ void repartirCartas(std::vector<Jugador>& jugadores, std::vector<Carta>& mazo, i
     }
 }
 
-void turnoJugador(Jugador& jugador, std::vector<Carta>& mazo, std::vector<Carta>& pilaDescarte, Carta& cartaSuperior, std::vector<Jugador>& jugadores) {
+void turnoJugador(Jugador& jugador, std::vector<Carta>& mazo, std::vector<Carta>& pilaDescarte, Carta& cartaSuperior, std::vector<Jugador>& jugadores, int& indiceJugadorActual, bool& direccionNormal) {
     std::cout << "Carta en el mazo de descarte: ";
     imprimirCarta(cartaSuperior);
 
@@ -232,53 +313,47 @@ void turnoJugador(Jugador& jugador, std::vector<Carta>& mazo, std::vector<Carta>
     std::cin >> eleccion;
 
     if (eleccion == 0) {
-        robarCarta(jugador, mazo); // Usa la función modificada para robar
-    } else if (eleccion > 0 && eleccion <= jugador.mano.size()) {
+        robarCarta(jugador, mazo);
+    } else if (eleccion > 0 && static_cast<size_t>(eleccion) <= jugador.mano.size()) {
         Carta cartaElegida = jugador.mano[eleccion - 1];
         if (esCartaJugable(cartaElegida, cartaSuperior)) {
-            pilaDescarte.push_back(cartaSuperior); // Coloca la carta actual en la pila de descarte
-            cartaSuperior = cartaElegida; // Actualiza la carta superior con la carta jugada
+            pilaDescarte.push_back(cartaSuperior);
+            cartaSuperior = cartaElegida;
 
-            // Permitir selección de color si es un comodín y mostrar el color elegido en la carta de descarte
-            if (cartaElegida.ladoClaro.tipo == COMODIN || cartaElegida.ladoClaro.tipo == COMODIN_ROBA_CUATRO ||
-                cartaElegida.ladoOscuro.tipo == COMODIN || cartaElegida.ladoOscuro.tipo == COMODIN_ROBA_CUATRO) {
+            if (cartaElegida.ladoClaro.tipo == COMODIN || cartaElegida.ladoClaro.tipo == COMODIN_ROBA_DOS ||
+                cartaElegida.ladoOscuro.tipo == COMODIN || cartaElegida.ladoOscuro.tipo == ROBO_SALVAJE) {
                 bool ladoClaro = !cartaElegida.estaVolteada;
                 Color nuevoColor = seleccionarColor(ladoClaro);
-
-                // Asigna el color seleccionado al lado actual (oscuro o claro) y muestra el comodín con el color elegido
                 if (modoOscuro) {
                     cartaSuperior.ladoOscuro.color = nuevoColor;
                 } else {
                     cartaSuperior.ladoClaro.color = nuevoColor;
                 }
-
-                // Mostrar la carta de descarte con el nuevo color
-                std::cout << "Color elegido para el comodín: ";
+                std::cout << "Color elegido para el comodÃ­n: ";
                 imprimirCarta(cartaSuperior);
             }
 
-            // Si la carta es de tipo FLIP, voltear todas las cartas y la carta superior
             if (cartaElegida.ladoClaro.tipo == FLIP || cartaElegida.ladoOscuro.tipo == FLIP) {
-                std::cout << "¡Carta FLIP jugada! Todas las cartas han sido volteadas.\n";
+                std::cout << "Â¡Carta FLIP jugada! Todas las cartas han sido volteadas.\n";
                 voltearTodasLasCartas(jugadores, pilaDescarte);
-                voltearCarta(cartaSuperior); // Voltear también la carta superior
+                voltearCarta(cartaSuperior);
             }
 
             jugador.mano.erase(jugador.mano.begin() + (eleccion - 1));
             std::cout << "Has jugado una carta.\n";
+            aplicarEfectoCartaEspecial(cartaElegida, indiceJugadorActual, jugadores, mazo, direccionNormal);
         } else {
-            std::cout << "\nNo puedes jugar esa carta. Debe coincidir en color o número con la carta en el mazo de descarte.\n\n";
-            turnoJugador(jugador, mazo, pilaDescarte, cartaSuperior, jugadores); // Llamada recursiva para intentar de nuevo
+            std::cout << "\nNo puedes jugar esa carta. Debe coincidir en color o nÃºmero con la carta en el mazo de descarte.\n\n";
+            turnoJugador(jugador, mazo, pilaDescarte, cartaSuperior, jugadores, indiceJugadorActual, direccionNormal);
         }
     } else {
-        std::cout << "Opción no válida. Inténtalo de nuevo.\n";
-        turnoJugador(jugador, mazo, pilaDescarte, cartaSuperior, jugadores); // Llamada recursiva para opción no válida
+        std::cout << "OpciÃ³n no vÃ¡lida. IntÃ©ntalo de nuevo.\n";
+        turnoJugador(jugador, mazo, pilaDescarte, cartaSuperior, jugadores, indiceJugadorActual, direccionNormal);
     }
 }
 
-
 void turnoBot(Jugador& jugador, std::vector<Carta>& mazo, std::vector<Carta>& pilaDescarte, Carta& cartaSuperior) {
-    std::cout << jugador.nombre << " está jugando...\n";
+    std::cout << jugador.nombre << " estÃ¡ jugando...\n";
     for (size_t i = 0; i < jugador.mano.size(); ++i) {
         if (esCartaJugable(jugador.mano[i], cartaSuperior)) {
             Carta cartaElegida = jugador.mano[i];
@@ -289,15 +364,7 @@ void turnoBot(Jugador& jugador, std::vector<Carta>& mazo, std::vector<Carta>& pi
             return;
         }
     }
-    jugador.mano.push_back(mazo.back());
-    mazo.pop_back();
-    std::cout << jugador.nombre << " ha robado una carta.\n";
-}
-
-void mostrarCartasJugadores(const std::vector<Jugador>& jugadores) {
-    for (const Jugador& jugador : jugadores) {
-        std::cout << jugador.nombre << " tiene " << jugador.mano.size() << " cartas." << std::endl;
-    }
+    robarCarta(jugador, mazo);
 }
 
 void cicloJuego(std::vector<Jugador>& jugadores, std::vector<Carta>& mazo) {
@@ -307,6 +374,8 @@ void cicloJuego(std::vector<Jugador>& jugadores, std::vector<Carta>& mazo) {
     Carta cartaSuperior = pilaDescarte.back();
 
     int indiceJugadorActual = 0;
+    bool direccionNormal = true;
+
     while (true) {
         Jugador& jugadorActual = jugadores[indiceJugadorActual];
         std::cout << "\nTurno de: " << jugadorActual.nombre << "\n";
@@ -315,14 +384,15 @@ void cicloJuego(std::vector<Jugador>& jugadores, std::vector<Carta>& mazo) {
         if (jugadorActual.esSintetico) {
             turnoBot(jugadorActual, mazo, pilaDescarte, cartaSuperior);
         } else {
-            turnoJugador(jugadorActual, mazo, pilaDescarte, cartaSuperior, jugadores);
+            turnoJugador(jugadorActual, mazo, pilaDescarte, cartaSuperior, jugadores, indiceJugadorActual, direccionNormal);
         }
 
         if (jugadorActual.mano.empty()) {
             std::cout << jugadorActual.nombre << " ha ganado el juego!\n";
             break;
         }
-        indiceJugadorActual = (indiceJugadorActual + 1) % jugadores.size();
+
+        indiceJugadorActual = (indiceJugadorActual + (direccionNormal ? 1 : -1) + jugadores.size()) % jugadores.size();
     }
 }
 
@@ -347,14 +417,14 @@ int main() {
         } else if (opcion == 3) {
             return 0;
         } else {
-            std::cout << "Opción no válida. Inténtalo de nuevo.\n";
+            std::cout << "OpciÃ³n no vÃ¡lida. IntÃ©ntalo de nuevo.\n";
         }
     }
 
     std::vector<Jugador> jugadores;
     int numJugadores;
 
-    std::cout << "Introduce el número de jugadores (2-10): ";
+    std::cout << "Introduce el nÃºmero de jugadores (2-10): ";
     std::cin >> numJugadores;
 
     for (int i = 0; i < numJugadores; ++i) {
