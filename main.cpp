@@ -7,9 +7,9 @@
 #include <chrono>
 #if defined(_WIN32)
 #include <windows.h>
-#elif defined(__APPLE__)
+#elif defined(_APPLE_)
 #include <cstdlib>
-#elif defined(__linux__)
+#elif defined(_linux_)
 #include <cstdlib>
 #endif
 
@@ -39,10 +39,10 @@ struct Jugador {
 void abrirEnlace(const std::string& url) {
 #if defined(_WIN32)
     ShellExecute(0, 0, url.c_str(), 0, 0, SW_SHOWNORMAL);
-#elif defined(__APPLE__)
+#elif defined(_APPLE_)
     std::string command = "open " + url;
     system(command.c_str());
-#elif defined(__linux__)
+#elif defined(_linux_)
     std::string command = "xdg-open " + url;
     system(command.c_str());
 #endif
@@ -158,7 +158,11 @@ bool esCartaJugable(const Carta& cartaJugada, const Carta& cartaSuperior) {
     const Lado& ladoActualJugada = cartaJugada.estaVolteada ? cartaJugada.ladoOscuro : cartaJugada.ladoClaro;
     const Lado& ladoActualSuperior = cartaSuperior.estaVolteada ? cartaSuperior.ladoOscuro : cartaSuperior.ladoClaro;
 
-    if (ladoActualJugada.tipo == COMODIN || ladoActualJugada.tipo == COMODIN_ROBA_DOS) {
+    if (ladoActualJugada.tipo == ROBO_SALVAJE || ladoActualJugada.tipo == COMODIN || ladoActualJugada.tipo == COMODIN_ROBA_DOS) {
+        return true;
+    }
+
+    if (ladoActualJugada.tipo != NUMERO && ladoActualJugada.tipo == ladoActualSuperior.tipo) {
         return true;
     }
 
@@ -208,57 +212,64 @@ void voltearTodasLasCartas(std::vector<Jugador>& jugadores, std::vector<Carta>& 
     }
 }
 
-void robarCarta(Jugador& jugador, std::vector<Carta>& mazo) {
-    Carta cartaRobada = mazo.back();
-    cartaRobada.estaVolteada = modoOscuro;
-    jugador.mano.push_back(cartaRobada);
-    mazo.pop_back();
-    std::cout << jugador.nombre << " ha robado una carta.\n";
+void robarCarta(Jugador& jugador, std::vector<Carta>& mazo, int cantidad = 1) {
+    for (int i = 0; i < cantidad && !mazo.empty(); ++i) {
+        Carta cartaRobada = mazo.back();
+        cartaRobada.estaVolteada = modoOscuro; // Asegura que la carta robada esté en el mismo estado que el modoOscuro
+        jugador.mano.push_back(cartaRobada);
+        mazo.pop_back();
+    }
+    std::cout << jugador.nombre << " ha robado " << cantidad << " carta(s).\n";
 }
 
-void aplicarEfectoCartaEspecial(const Carta& cartaEspecial, int& indiceJugadorActual, std::vector<Jugador>& jugadores, std::vector<Carta>& mazo, bool& direccionNormal) {
+void aplicarEfectoCartaEspecial(const Carta& cartaEspecial, int& indiceJugadorActual, std::vector<Jugador>& jugadores, std::vector<Carta>& mazo, bool& direccionNormal, bool& turnoContinuo) {
     int siguienteJugador = (indiceJugadorActual + (direccionNormal ? 1 : -1) + jugadores.size()) % jugadores.size();
 
-    switch (cartaEspecial.ladoClaro.tipo) {
+    // Determina si la carta está en el lado claro o en el lado oscuro
+    const Lado& ladoActual = cartaEspecial.estaVolteada ? cartaEspecial.ladoOscuro : cartaEspecial.ladoClaro;
+
+    // Aplica el efecto de la carta en el lado correspondiente
+    switch (ladoActual.tipo) {
         case ROBA_UNO:
             robarCarta(jugadores[siguienteJugador], mazo);
-            // Saltar el turno del siguiente jugador
             indiceJugadorActual = siguienteJugador;
             break;
         case PIERDE_TURNO:
-            // Saltar el turno del siguiente jugador
-            indiceJugadorActual = siguienteJugador;
+            indiceJugadorActual = siguienteJugador; // Salta al siguiente jugador
             break;
         case REVERSA:
-            direccionNormal = !direccionNormal;
+            direccionNormal = !direccionNormal; // Cambia la dirección del juego
+            std::cout << "¡Dirección cambiada!\n";
             break;
         case COMODIN_ROBA_DOS:
-            robarCarta(jugadores[siguienteJugador], mazo);
-            robarCarta(jugadores[siguienteJugador], mazo);
-            // Saltar el turno del siguiente jugador
+            robarCarta(jugadores[siguienteJugador], mazo, 2);
             indiceJugadorActual = siguienteJugador;
             break;
         case ROBA_CINCO:
-               robarCarta(jugadores[siguienteJugador], mazo);
-               robarCarta(jugadores[siguienteJugador], mazo);
-               robarCarta(jugadores[siguienteJugador], mazo);
-               robarCarta(jugadores[siguienteJugador], mazo);
-               robarCarta(jugadores[siguienteJugador], mazo);
-            // Saltar el turno del siguiente jugador
+            robarCarta(jugadores[siguienteJugador], mazo, 5);
             indiceJugadorActual = siguienteJugador;
             break;
         case SALTO_A_TODOS:
-            // El jugador actual vuelve a jugar sin cambiar el índice
+            std::cout << "¡SALTO A TODOS jugado! El jugador actual puede jugar otra carta.\n";
+            turnoContinuo = true; // Permite que el jugador juegue otra carta en el mismo turno
             break;
         case ROBO_SALVAJE: {
+            // Selección de color solo una vez
             Color colorElegido = seleccionarColor(!cartaEspecial.estaVolteada);
-            Carta& siguienteCarta = jugadores[siguienteJugador].mano.back();
-            while (siguienteCarta.ladoClaro.color != colorElegido) {
+            std::cout << "Color elegido para el ROBO SALVAJE: " << obtenerNombreColor(colorElegido) << std::endl;
+
+            // El jugador debe robar cartas hasta obtener una del color elegido
+            bool cartaDelColorEncontrada = false;
+            while (!cartaDelColorEncontrada && !mazo.empty()) {
                 robarCarta(jugadores[siguienteJugador], mazo);
-                siguienteCarta = jugadores[siguienteJugador].mano.back();
+                const Carta& cartaRobada = jugadores[siguienteJugador].mano.back();
+                Color colorCartaRobada = cartaRobada.estaVolteada ? cartaRobada.ladoOscuro.color : cartaRobada.ladoClaro.color;
+
+                if (colorCartaRobada == colorElegido) {
+                    std::cout << jugadores[siguienteJugador].nombre << " ha robado una carta del color " << obtenerNombreColor(colorElegido) << ".\n";
+                    cartaDelColorEncontrada = true;
+                }
             }
-            // Saltar el turno del siguiente jugador
-            indiceJugadorActual = siguienteJugador;
             break;
         }
         default:
@@ -298,7 +309,7 @@ void repartirCartas(std::vector<Jugador>& jugadores, std::vector<Carta>& mazo, i
     }
 }
 
-void turnoJugador(Jugador& jugador, std::vector<Carta>& mazo, std::vector<Carta>& pilaDescarte, Carta& cartaSuperior, std::vector<Jugador>& jugadores, int& indiceJugadorActual, bool& direccionNormal) {
+void turnoJugador(Jugador& jugador, std::vector<Carta>& mazo, std::vector<Carta>& pilaDescarte, Carta& cartaSuperior, std::vector<Jugador>& jugadores, int& indiceJugadorActual, bool& direccionNormal, bool& turnoContinuo) {
     std::cout << "Carta en el mazo de descarte: ";
     imprimirCarta(cartaSuperior);
 
@@ -306,6 +317,20 @@ void turnoJugador(Jugador& jugador, std::vector<Carta>& mazo, std::vector<Carta>
     for (size_t i = 0; i < jugador.mano.size(); ++i) {
         std::cout << i + 1 << ". ";
         imprimirCarta(jugador.mano[i]);
+    }
+
+    // Verificar si el jugador tiene exactamente dos cartas y darle la opción de decir "UNO"
+    bool dijoUno = false;
+    if (jugador.mano.size() == 2) {
+        std::string decirUno;
+        std::cout << jugador.nombre << ", tienes dos cartas. ¿Quieres decir 'UNO'? (s/n): ";
+        std::cin >> decirUno;
+
+        // Marca si el jugador dijo "UNO"
+        if (decirUno == "s" || decirUno == "S") {
+            dijoUno = true;
+            std::cout << jugador.nombre << " dijo 'UNO'. ¡Puedes jugar tu carta!\n";
+        }
     }
 
     int eleccion;
@@ -320,8 +345,10 @@ void turnoJugador(Jugador& jugador, std::vector<Carta>& mazo, std::vector<Carta>
             pilaDescarte.push_back(cartaSuperior);
             cartaSuperior = cartaElegida;
 
-            if (cartaElegida.ladoClaro.tipo == COMODIN || cartaElegida.ladoClaro.tipo == COMODIN_ROBA_DOS ||
-                cartaElegida.ladoOscuro.tipo == COMODIN || cartaElegida.ladoOscuro.tipo == ROBO_SALVAJE) {
+            if ((cartaElegida.ladoClaro.tipo == COMODIN || cartaElegida.ladoClaro.tipo == COMODIN_ROBA_DOS ||
+                 cartaElegida.ladoOscuro.tipo == COMODIN) &&
+                !turnoContinuo) {
+
                 bool ladoClaro = !cartaElegida.estaVolteada;
                 Color nuevoColor = seleccionarColor(ladoClaro);
                 if (modoOscuro) {
@@ -341,30 +368,74 @@ void turnoJugador(Jugador& jugador, std::vector<Carta>& mazo, std::vector<Carta>
 
             jugador.mano.erase(jugador.mano.begin() + (eleccion - 1));
             std::cout << "Has jugado una carta.\n";
-            aplicarEfectoCartaEspecial(cartaElegida, indiceJugadorActual, jugadores, mazo, direccionNormal);
+            aplicarEfectoCartaEspecial(cartaElegida, indiceJugadorActual, jugadores, mazo, direccionNormal, turnoContinuo);
+
+            // Si al final del turno el jugador tiene solo una carta y no dijo "UNO", se le penaliza
+            if (jugador.mano.size() == 1 && !dijoUno) {
+                std::cout << jugador.nombre << " no dijo 'UNO' y debe robar dos cartas como penalización.\n";
+                robarCarta(jugador, mazo, 2);
+            }
         } else {
             std::cout << "\nNo puedes jugar esa carta. Debe coincidir en color o número con la carta en el mazo de descarte.\n\n";
-            turnoJugador(jugador, mazo, pilaDescarte, cartaSuperior, jugadores, indiceJugadorActual, direccionNormal);
+            turnoJugador(jugador, mazo, pilaDescarte, cartaSuperior, jugadores, indiceJugadorActual, direccionNormal, turnoContinuo);
         }
     } else {
         std::cout << "Opción no válida. Inténtalo de nuevo.\n";
-        turnoJugador(jugador, mazo, pilaDescarte, cartaSuperior, jugadores, indiceJugadorActual, direccionNormal);
+        turnoJugador(jugador, mazo, pilaDescarte, cartaSuperior, jugadores, indiceJugadorActual, direccionNormal, turnoContinuo);
     }
 }
 
-void turnoBot(Jugador& jugador, std::vector<Carta>& mazo, std::vector<Carta>& pilaDescarte, Carta& cartaSuperior) {
+
+   void turnoBot(Jugador& jugador, std::vector<Carta>& mazo, std::vector<Carta>& pilaDescarte, Carta& cartaSuperior, int& indiceJugadorActual, std::vector<Jugador>& jugadores, bool& direccionNormal, bool& turnoContinuo) {
     std::cout << jugador.nombre << " está jugando...\n";
+
+    // Buscar una carta jugable en la mano del bot
+    bool cartaJugableEncontrada = false;
     for (size_t i = 0; i < jugador.mano.size(); ++i) {
         if (esCartaJugable(jugador.mano[i], cartaSuperior)) {
             Carta cartaElegida = jugador.mano[i];
             pilaDescarte.push_back(cartaSuperior);
             cartaSuperior = cartaElegida;
+
+            // Si la carta es un comodín o cambio de color, el bot elige un color aleatorio
+            if (cartaElegida.ladoClaro.tipo == COMODIN || cartaElegida.ladoClaro.tipo == COMODIN_ROBA_DOS || cartaElegida.ladoOscuro.tipo == ROBO_SALVAJE) {
+                bool ladoClaro = !cartaElegida.estaVolteada;
+                Color colorElegido = static_cast<Color>(std::rand() % 4 + (ladoClaro ? ROJO : MORADO)); // Selección aleatoria de color
+                if (modoOscuro) {
+                    cartaSuperior.ladoOscuro.color = colorElegido;
+                } else {
+                    cartaSuperior.ladoClaro.color = colorElegido;
+                }
+                std::cout << jugador.nombre << " ha elegido el color " << obtenerNombreColor(colorElegido) << " para el comodín.\n";
+            }
+
+            if (cartaElegida.ladoClaro.tipo == FLIP || cartaElegida.ladoOscuro.tipo == FLIP) {
+                std::cout << "¡Carta FLIP jugada por " << jugador.nombre << "! Todas las cartas han sido volteadas.\n";
+                voltearTodasLasCartas(jugadores, pilaDescarte);
+                voltearCarta(cartaSuperior);
+            }
+
             jugador.mano.erase(jugador.mano.begin() + i);
             std::cout << jugador.nombre << " ha jugado una carta.\n";
-            return;
+
+            // Aplicar efecto de la carta especial si corresponde
+            aplicarEfectoCartaEspecial(cartaElegida, indiceJugadorActual, jugadores, mazo, direccionNormal, turnoContinuo);
+
+            cartaJugableEncontrada = true;
+            break;
         }
     }
-    robarCarta(jugador, mazo);
+
+    // Si no encuentra una carta jugable, roba una carta
+    if (!cartaJugableEncontrada) {
+        robarCarta(jugador, mazo);
+        std::cout << jugador.nombre << " no tenía cartas jugables y ha robado una carta.\n";
+    }
+
+    // Comprobación adicional para el bot diciendo "UNO" si solo le queda una carta
+    if (jugador.mano.size() == 1) {
+        std::cout << jugador.nombre << " dice ¡UNO!\n";
+    }
 }
 
 void cicloJuego(std::vector<Jugador>& jugadores, std::vector<Carta>& mazo) {
@@ -375,6 +446,7 @@ void cicloJuego(std::vector<Jugador>& jugadores, std::vector<Carta>& mazo) {
 
     int indiceJugadorActual = 0;
     bool direccionNormal = true;
+    bool turnoContinuo = false; // Se mantiene fuera del bucle para recordar el estado
 
     while (true) {
         Jugador& jugadorActual = jugadores[indiceJugadorActual];
@@ -382,9 +454,10 @@ void cicloJuego(std::vector<Jugador>& jugadores, std::vector<Carta>& mazo) {
         mostrarCartasJugadores(jugadores);
 
         if (jugadorActual.esSintetico) {
-            turnoBot(jugadorActual, mazo, pilaDescarte, cartaSuperior);
+            // Llamada corregida
+            turnoBot(jugadorActual, mazo, pilaDescarte, cartaSuperior, indiceJugadorActual, jugadores, direccionNormal, turnoContinuo);
         } else {
-            turnoJugador(jugadorActual, mazo, pilaDescarte, cartaSuperior, jugadores, indiceJugadorActual, direccionNormal);
+            turnoJugador(jugadorActual, mazo, pilaDescarte, cartaSuperior, jugadores, indiceJugadorActual, direccionNormal, turnoContinuo);
         }
 
         if (jugadorActual.mano.empty()) {
@@ -392,7 +465,13 @@ void cicloJuego(std::vector<Jugador>& jugadores, std::vector<Carta>& mazo) {
             break;
         }
 
-        indiceJugadorActual = (indiceJugadorActual + (direccionNormal ? 1 : -1) + jugadores.size()) % jugadores.size();
+        // Si turnoContinuo es falso, cambia de jugador
+        if (!turnoContinuo) {
+            indiceJugadorActual = (indiceJugadorActual + (direccionNormal ? 1 : -1) + jugadores.size()) % jugadores.size();
+        } else {
+            // Resetea turnoContinuo para que no se repita automáticamente en el próximo turno
+            turnoContinuo = false;
+        }
     }
 }
 
@@ -401,46 +480,66 @@ int main() {
     std::srand(seed);
     int opcion;
     bool iniciarJuego = false;
+    bool jugarDeNuevo = true;
 
-    while (!iniciarJuego) {
-        std::cout << "Bienvenido a UNO Flip\n";
-        std::cout << "1. Ver reglas del juego\n";
-        std::cout << "2. Iniciar juego\n";
-        std::cout << "3. Salir\n";
-        std::cout << "Selecciona una opcion: ";
-        std::cin >> opcion;
+    while (jugarDeNuevo) {
+        // Menú principal para ver reglas, iniciar juego o salir
+        while (!iniciarJuego) {
+            std::cout << "Bienvenido a UNO Flip\n";
+            std::cout << "1. Ver reglas del juego\n";
+            std::cout << "2. Iniciar juego\n";
+            std::cout << "3. Salir\n";
+            std::cout << "Selecciona una opcion: ";
+            std::cin >> opcion;
 
-        if (opcion == 1) {
-            mostrarReglas();
-        } else if (opcion == 2) {
-            iniciarJuego = true;
-        } else if (opcion == 3) {
-            return 0;
+            if (opcion == 1) {
+                mostrarReglas();
+            } else if (opcion == 2) {
+                iniciarJuego = true;
+            } else if (opcion == 3) {
+                return 0;
+            } else {
+                std::cout << "Opción no válida. Inténtalo de nuevo.\n";
+            }
+        }
+
+        // Configuración de jugadores
+        std::vector<Jugador> jugadores;
+        int numJugadores;
+
+        std::cout << "Introduce el número de jugadores (2-10): ";
+        std::cin >> numJugadores;
+
+        for (int i = 0; i < numJugadores; ++i) {
+            Jugador jugador;
+            std::cout << "Jugador " << (i + 1) << " es humano (0) o bot (1): ";
+            int esBot;
+            std::cin >> esBot;
+            jugador.esSintetico = (esBot == 1);
+            jugador.nombre = "Jugador " + std::to_string(i + 1);
+            jugadores.push_back(jugador);
+        }
+
+        // Crear y repartir el mazo
+        std::vector<Carta> mazo = crearMazo();
+        barajarMazo(mazo);
+        repartirCartas(jugadores, mazo, 7);
+
+        // Iniciar ciclo de juego
+        cicloJuego(jugadores, mazo);
+
+        // Preguntar si desean jugar de nuevo
+        char respuesta;
+        std::cout << "¿Quiere jugar de nuevo? (s/n): ";
+        std::cin >> respuesta;
+
+        if (respuesta == 's' || respuesta == 'S') {
+            iniciarJuego = false; // Reiniciar el juego
         } else {
-            std::cout << "Opción no válida. Inténtalo de nuevo.\n";
+            jugarDeNuevo = false; // Salir del bucle y finalizar el programa
+            std::cout << "Gracias por jugar. ¡Hasta la próxima!\n";
         }
     }
-
-    std::vector<Jugador> jugadores;
-    int numJugadores;
-
-    std::cout << "Introduce el número de jugadores (2-10): ";
-    std::cin >> numJugadores;
-
-    for (int i = 0; i < numJugadores; ++i) {
-        Jugador jugador;
-        std::cout << "Jugador " << (i + 1) << " es humano (0) o bot (1): ";
-        int esBot;
-        std::cin >> esBot;
-        jugador.esSintetico = (esBot == 1);
-        jugador.nombre = "Jugador " + std::to_string(i + 1);
-        jugadores.push_back(jugador);
-    }
-
-    std::vector<Carta> mazo = crearMazo();
-    barajarMazo(mazo);
-    repartirCartas(jugadores, mazo, 7);
-    cicloJuego(jugadores, mazo);
 
     return 0;
 }
