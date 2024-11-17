@@ -86,20 +86,12 @@ std::string obtenerNombreTipo(Tipo tipo, int numero) {
 
 void setColor(Color color) {
     switch (color) {
-        case ROJO: std::cout << "\033[31m"; break;
-        case VERDE: std::cout << "\033[32m"; break;
-        case AZUL: std::cout << "\033[34m"; break;
-        case AMARILLO: std::cout << "\033[33m"; break;
-        case MORADO: std::cout << "\033[35m"; break;
-        case NARANJA: std::cout << "\033[33m"; break;
-        case AGUAMARINA: std::cout << "\033[36m"; break;
-        case ROSA: std::cout << "\033[91m"; break;
-        default: std::cout << "\033[0m";
+    
     }
 }
 
 void resetColor() {
-    std::cout << "\033[0m";
+    
 }
 
 std::vector<Carta> crearMazo() {
@@ -239,10 +231,45 @@ void aplicarEfectoCartaEspecial(const Carta& cartaEspecial, int& indiceJugadorAc
             break;
         case REVERSA:
             direccionNormal = !direccionNormal; // Cambia la dirección del juego
-            std::cout << "¡Dirección cambiada!\n";
+            std::cout << "¡Direccion cambiada!\n";
             break;
         case COMODIN_ROBA_DOS:
-            robarCarta(jugadores[siguienteJugador], mazo, 2);
+            // Efecto principal de "roba dos"
+            std::cout << jugadores[siguienteJugador].nombre << " tiene que robar 2 cartas... ";
+
+            // Preguntar al siguiente jugador si desea desafiar
+            std::cout << jugadores[siguienteJugador].nombre << ", ¿quieres desafiar a " << jugadores[indiceJugadorActual].nombre << "? (s/n): ";
+            char respuesta;
+            std::cin >> respuesta;
+
+            if (respuesta == 's' || respuesta == 'S') {
+                // Verificar si el jugador actual tenía cartas del mismo color que la del mazo de descarte
+                bool tieneColorIgual = false;
+                Color colorDescarte = cartaEspecial.estaVolteada ? cartaEspecial.ladoOscuro.color : cartaEspecial.ladoClaro.color;
+
+                for (const Carta& carta : jugadores[indiceJugadorActual].mano) {
+                    const Lado& ladoMano = carta.estaVolteada ? carta.ladoOscuro : carta.ladoClaro;
+                    if (ladoMano.color == colorDescarte) {
+                        tieneColorIgual = true;
+                        break;
+                    }
+                }
+
+                if (tieneColorIgual) {
+                    // El jugador actual jugó la carta ilegalmente
+                    std::cout << jugadores[indiceJugadorActual].nombre << " tenia cartas del color " << obtenerNombreColor(colorDescarte) << " y jugo ilegalmente.\n";
+                    std::cout << jugadores[indiceJugadorActual].nombre << " roba 2 cartas como penalizacion.\n";
+                    robarCarta(jugadores[indiceJugadorActual], mazo, 2);
+                } else {
+                    // El jugador actual no tenía cartas del color, el retador pierde el desafío
+                    std::cout << jugadores[siguienteJugador].nombre << " desafio incorrectamente. ¡Debe robar 4 cartas!\n";
+                    robarCarta(jugadores[siguienteJugador], mazo, 4);
+                }
+            } else {
+                // Si no hay desafío, aplica el efecto normal
+                robarCarta(jugadores[siguienteJugador], mazo, 2);
+            }
+
             indiceJugadorActual = siguienteJugador;
             break;
         case ROBA_CINCO:
@@ -281,7 +308,7 @@ void imprimirCarta(const Carta& carta) {
     const Lado& ladoActual = carta.estaVolteada ? carta.ladoOscuro : carta.ladoClaro;
 
     if ((ladoActual.tipo == COMODIN || ladoActual.tipo == COMODIN_ROBA_DOS) && ladoActual.color != NINGUNO) {
-        std::cout << "Color elegido para el comodín: " << obtenerNombreColor(ladoActual.color) << std::endl;
+        std::cout << "Color elegido para el comodin: " << obtenerNombreColor(ladoActual.color) << std::endl;
     } else {
         if (ladoActual.tipo == COMODIN || ladoActual.tipo == COMODIN_ROBA_DOS) {
             std::cout << obtenerNombreTipo(ladoActual.tipo, ladoActual.numero) << std::endl;
@@ -356,7 +383,7 @@ void turnoJugador(Jugador& jugador, std::vector<Carta>& mazo, std::vector<Carta>
                 } else {
                     cartaSuperior.ladoClaro.color = nuevoColor;
                 }
-                std::cout << "Color elegido para el comodín: ";
+                std::cout << "Color elegido para el comodin: ";
                 imprimirCarta(cartaSuperior);
             }
 
@@ -372,22 +399,22 @@ void turnoJugador(Jugador& jugador, std::vector<Carta>& mazo, std::vector<Carta>
 
             // Si al final del turno el jugador tiene solo una carta y no dijo "UNO", se le penaliza
             if (jugador.mano.size() == 1 && !dijoUno) {
-                std::cout << jugador.nombre << " no dijo 'UNO' y debe robar dos cartas como penalización.\n";
+                std::cout << jugador.nombre << " no dijo 'UNO' y debe robar dos cartas como penalizacion.\n";
                 robarCarta(jugador, mazo, 2);
             }
         } else {
-            std::cout << "\nNo puedes jugar esa carta. Debe coincidir en color o número con la carta en el mazo de descarte.\n\n";
+            std::cout << "\nNo puedes jugar esa carta. Debe coincidir en color o numero con la carta en el mazo de descarte.\n\n";
             turnoJugador(jugador, mazo, pilaDescarte, cartaSuperior, jugadores, indiceJugadorActual, direccionNormal, turnoContinuo);
         }
     } else {
-        std::cout << "Opción no válida. Inténtalo de nuevo.\n";
+        std::cout << "Opcion no valida. Intentalo de nuevo.\n";
         turnoJugador(jugador, mazo, pilaDescarte, cartaSuperior, jugadores, indiceJugadorActual, direccionNormal, turnoContinuo);
     }
 }
 
 
    void turnoBot(Jugador& jugador, std::vector<Carta>& mazo, std::vector<Carta>& pilaDescarte, Carta& cartaSuperior, int& indiceJugadorActual, std::vector<Jugador>& jugadores, bool& direccionNormal, bool& turnoContinuo) {
-    std::cout << jugador.nombre << " está jugando...\n";
+    std::cout << jugador.nombre << " esta jugando...\n";
 
     // Buscar una carta jugable en la mano del bot
     bool cartaJugableEncontrada = false;
@@ -406,7 +433,7 @@ void turnoJugador(Jugador& jugador, std::vector<Carta>& mazo, std::vector<Carta>
                 } else {
                     cartaSuperior.ladoClaro.color = colorElegido;
                 }
-                std::cout << jugador.nombre << " ha elegido el color " << obtenerNombreColor(colorElegido) << " para el comodín.\n";
+                std::cout << jugador.nombre << " ha elegido el color " << obtenerNombreColor(colorElegido) << " para el comodin.\n";
             }
 
             if (cartaElegida.ladoClaro.tipo == FLIP || cartaElegida.ladoOscuro.tipo == FLIP) {
@@ -429,7 +456,7 @@ void turnoJugador(Jugador& jugador, std::vector<Carta>& mazo, std::vector<Carta>
     // Si no encuentra una carta jugable, roba una carta
     if (!cartaJugableEncontrada) {
         robarCarta(jugador, mazo);
-        std::cout << jugador.nombre << " no tenía cartas jugables y ha robado una carta.\n";
+        std::cout << jugador.nombre << " no tenia cartas jugables y ha robado una carta.\n";
     }
 
     // Comprobación adicional para el bot diciendo "UNO" si solo le queda una carta
@@ -499,7 +526,7 @@ int main() {
             } else if (opcion == 3) {
                 return 0;
             } else {
-                std::cout << "Opción no válida. Inténtalo de nuevo.\n";
+                std::cout << "Opcion no valida. Intentalo de nuevo.\n";
             }
         }
 
@@ -507,7 +534,7 @@ int main() {
         std::vector<Jugador> jugadores;
         int numJugadores;
 
-        std::cout << "Introduce el número de jugadores (2-10): ";
+        std::cout << "Introduce el numero de jugadores (2-10): ";
         std::cin >> numJugadores;
 
         for (int i = 0; i < numJugadores; ++i) {
@@ -537,7 +564,7 @@ int main() {
             iniciarJuego = false; // Reiniciar el juego
         } else {
             jugarDeNuevo = false; // Salir del bucle y finalizar el programa
-            std::cout << "Gracias por jugar. ¡Hasta la próxima!\n";
+            std::cout << "Gracias por jugar. ¡Hasta la proxima!\n";
         }
     }
 
