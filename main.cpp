@@ -218,7 +218,22 @@ Color seleccionarColor(bool ladoClaro) {
 void voltearCarta(Carta& carta) {
     carta.estaVolteada = !carta.estaVolteada;
 }
+void imprimirCarta(const Carta& carta) {
+    const Lado& ladoActual = carta.estaVolteada ? carta.ladoOscuro : carta.ladoClaro;
 
+    if ((ladoActual.tipo == COMODIN || ladoActual.tipo == COMODIN_ROBA_DOS) && ladoActual.color != NINGUNO) {
+        std::cout << "Color elegido para el comodín: " << obtenerNombreColor(ladoActual.color) << std::endl;
+    } else {
+        if (ladoActual.tipo == COMODIN || ladoActual.tipo == COMODIN_ROBA_DOS) {
+            std::cout << obtenerNombreTipo(ladoActual.tipo, ladoActual.numero) << std::endl;
+        } else {
+            setColor(ladoActual.color);
+            std::cout << obtenerNombreColor(ladoActual.color) << " "
+                      << obtenerNombreTipo(ladoActual.tipo, ladoActual.numero) << std::endl;
+            resetColor();
+        }
+    }
+}
 void voltearTodasLasCartas(std::vector<Jugador>& jugadores, std::vector<Carta>& pilaDescarte) {
     modoOscuro = !modoOscuro;
     for (Jugador& jugador : jugadores) {
@@ -231,15 +246,23 @@ void voltearTodasLasCartas(std::vector<Jugador>& jugadores, std::vector<Carta>& 
     }
 }
 
-void robarCarta(Jugador& jugador, std::vector<Carta>& mazo, int cantidad = 1) {
+void robarCarta(Jugador& jugador, std::vector<Carta>& mazo, int cantidad = 1, bool forzarOscuro = false) {
     for (int i = 0; i < cantidad && !mazo.empty(); ++i) {
         Carta cartaRobada = mazo.back();
-        cartaRobada.estaVolteada = modoOscuro; // Asegura que la carta robada esté en el mismo estado que el modoOscuro
-        jugador.mano.push_back(cartaRobada);
         mazo.pop_back();
+
+        // Siempre configura el lado oscuro si está forzado
+        if (forzarOscuro) {
+            cartaRobada.estaVolteada = true; // Asegurarse de que se use el lado oscuro
+        } else {
+            cartaRobada.estaVolteada = modoOscuro; // Usa el estado global del modo
+        }
+
+        jugador.mano.push_back(cartaRobada);
+        imprimirCarta(cartaRobada);
     }
-    std::cout << jugador.nombre << " ha robado " << cantidad << " carta(s).\n";
 }
+
 
 void aplicarEfectoCartaEspecial(const Carta& cartaEspecial, int& indiceJugadorActual, std::vector<Jugador>& jugadores, std::vector<Carta>& mazo, bool& direccionNormal, bool& turnoContinuo) {
     int siguienteJugador = (indiceJugadorActual + (direccionNormal ? 1 : -1) + jugadores.size()) % jugadores.size();
@@ -307,49 +330,41 @@ void aplicarEfectoCartaEspecial(const Carta& cartaEspecial, int& indiceJugadorAc
             robarCarta(jugadores[siguienteJugador], mazo, 5);
             indiceJugadorActual = siguienteJugador;
             break;
-    case ROBO_SALVAJE:
-        std::cout << jugadores[siguienteJugador].nombre << " debe robar cartas del lado oscuro hasta que salga una del color elegido.\n";
-        while (true) {
-            if (mazo.empty()) {
-                std::cout << "El mazo se agotó. El efecto se detiene.\n";
-                break;
-            }
-            // Roba la carta del mazo
-            Carta cartaRobada = mazo.back();
-            mazo.pop_back();
-            jugadores[siguienteJugador].mano.push_back(cartaRobada);
 
-            // Evalúa siempre el lado oscuro
-            const Lado& ladoRobado = cartaRobada.ladoOscuro;
-            if (ladoRobado.color == colorElegidoGlobal) {
-                std::cout << "¡Carta del color elegido obtenida! Efecto completado.\n";
-                indiceJugadorActual = siguienteJugador;
-                break;
-            }
-    }
-    break;
+case ROBO_SALVAJE:
+    std::cout << jugadores[indiceJugadorActual].nombre << " ha jugado Robo Salvaje.\n";
 
-        default:
+    // El jugador elige un color
+    colorElegidoGlobal = seleccionarColor(false); // Siempre seleccionar en modo oscuro
+    std::cout << "Color elegido para el Robo Salvaje: " << colorElegidoGlobal << std::endl;
+
+    std::cout << jugadores[siguienteJugador].nombre << " debe robar cartas hasta que salga una del color elegido.\n";
+
+    while (true) {
+        if (mazo.empty()) {
+            std::cout << "El mazo se agotó. El efecto se detiene.\n";
             break;
-    }
-}
+        }
 
-void imprimirCarta(const Carta& carta) {
-    const Lado& ladoActual = carta.estaVolteada ? carta.ladoOscuro : carta.ladoClaro;
-
-    if ((ladoActual.tipo == COMODIN || ladoActual.tipo == COMODIN_ROBA_DOS) && ladoActual.color != NINGUNO) {
-        std::cout << "Color elegido para el comodín: " << obtenerNombreColor(ladoActual.color) << std::endl;
-    } else {
-        if (ladoActual.tipo == COMODIN || ladoActual.tipo == COMODIN_ROBA_DOS) {
-            std::cout << obtenerNombreTipo(ladoActual.tipo, ladoActual.numero) << std::endl;
-        } else {
-            setColor(ladoActual.color);
-            std::cout << obtenerNombreColor(ladoActual.color) << " "
-                      << obtenerNombreTipo(ladoActual.tipo, ladoActual.numero) << std::endl;
-            resetColor();
+        // Robar carta del mazo
+        Carta cartaRobada = mazo.back();
+        mazo.pop_back();
+        cartaRobada.estaVolteada = true; // Forzar el lado oscuro
+        jugadores[siguienteJugador].mano.push_back(cartaRobada);
+        // Verificar si el color del lado oscuro coincide con el color elegido
+        const Lado& ladoRobado = cartaRobada.ladoOscuro;
+        if (ladoRobado.color == colorElegidoGlobal) {
+            std::cout << "¡Carta del color elegido obtenida! Efecto completado.\n";
+            break; // Salir del bucle
         }
     }
+
+    // Cambiar al siguiente jugador
+    indiceJugadorActual = siguienteJugador;
+    break;
+    }
 }
+
 
 void mostrarCartasJugadores(const std::vector<Jugador>& jugadores) {
     for (const Jugador& jugador : jugadores) {
