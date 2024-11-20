@@ -464,20 +464,26 @@ void turnoJugador(Jugador& jugador, std::vector<Carta>& mazo, std::vector<Carta>
 }
 
    void turnoBot(Jugador& jugador, std::vector<Carta>& mazo, std::vector<Carta>& pilaDescarte, Carta& cartaSuperior, int& indiceJugadorActual, std::vector<Jugador>& jugadores, bool& direccionNormal, bool& turnoContinuo) {
-    std::cout << jugador.nombre << " está jugando...\n";
+    std::cout << "\nLe toca al jugador (Bot): " << jugador.nombre << "\n";
+
+    // Mostrar la carta actual en el mazo de descarte
+    std::cout << "Carta en el mazo de descarte: ";
+    imprimirCarta(cartaSuperior);
 
     // Buscar una carta jugable en la mano del bot
     bool cartaJugableEncontrada = false;
     for (size_t i = 0; i < jugador.mano.size(); ++i) {
         if (esCartaJugable(jugador.mano[i], cartaSuperior)) {
+            // Si encuentra una carta jugable, la juega
             Carta cartaElegida = jugador.mano[i];
             pilaDescarte.push_back(cartaSuperior);
             cartaSuperior = cartaElegida;
 
-            // Si la carta es un comodín o cambio de color, el bot elige un color aleatorio
+            // Aplicar efectos de cartas especiales
             if (cartaElegida.ladoClaro.tipo == COMODIN || cartaElegida.ladoClaro.tipo == COMODIN_ROBA_DOS || cartaElegida.ladoOscuro.tipo == ROBO_SALVAJE) {
+                // Seleccionar un color aleatorio para el comodín
                 bool ladoClaro = !cartaElegida.estaVolteada;
-                Color colorElegido = static_cast<Color>(std::rand() % 4 + (ladoClaro ? ROJO : MORADO)); // Selección aleatoria de color
+                Color colorElegido = static_cast<Color>(std::rand() % 4 + (ladoClaro ? ROJO : MORADO));
                 if (modoOscuro) {
                     cartaSuperior.ladoOscuro.color = colorElegido;
                 } else {
@@ -492,10 +498,11 @@ void turnoJugador(Jugador& jugador, std::vector<Carta>& mazo, std::vector<Carta>
                 voltearCarta(cartaSuperior);
             }
 
+            // Eliminar la carta jugada de la mano del bot
             jugador.mano.erase(jugador.mano.begin() + i);
             std::cout << jugador.nombre << " ha jugado una carta.\n";
 
-            // Aplicar efecto de la carta especial si corresponde
+            // Aplicar el efecto de la carta especial si corresponde
             aplicarEfectoCartaEspecial(cartaElegida, indiceJugadorActual, jugadores, mazo, direccionNormal, turnoContinuo);
 
             cartaJugableEncontrada = true;
@@ -509,11 +516,19 @@ void turnoJugador(Jugador& jugador, std::vector<Carta>& mazo, std::vector<Carta>
         std::cout << jugador.nombre << " no tenía cartas jugables y ha robado una carta.\n";
     }
 
-    // Comprobación adicional para el bot diciendo "UNO" si solo le queda una carta
+    // Comprobación adicional para que el bot diga "UNO" si le queda una carta
     if (jugador.mano.size() == 1) {
         std::cout << jugador.nombre << " dice ¡UNO!\n";
     }
+
+    // Cambiar de jugador si el turno no es continuo
+    if (!turnoContinuo) {
+        indiceJugadorActual = (indiceJugadorActual + (direccionNormal ? 1 : -1) + jugadores.size()) % jugadores.size();
+    } else {
+        turnoContinuo = false; // Restablecer turno continuo para la próxima iteración
+    }
 }
+
 
 int calcularPuntos(const Carta& carta) {
     const Lado& ladoActual = carta.estaVolteada ? carta.ladoOscuro : carta.ladoClaro;
