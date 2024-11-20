@@ -1,0 +1,3 @@
+C:/Users/palez/Downloads/Proyecto-Analisis-de-Algoritmos/cmake-build-debug/CMakeFiles/Proyecto_Analisis_de_Algoritmos.dir
+C:/Users/palez/Downloads/Proyecto-Analisis-de-Algoritmos/cmake-build-debug/CMakeFiles/edit_cache.dir
+C:/Users/palez/Downloads/Proyecto-Analisis-de-Algoritmos/cmake-build-debug/CMakeFiles/rebuild_cache.dir

@@ -107,7 +107,14 @@ void resetColor() {
     std::vector<Carta> crearMazo() {
     std::vector<Carta> mazo;
 
-    // Lado claro y oscuro
+    // Usar un generador aleatorio para decidir la cantidad de cada carta
+    std::mt19937 gen(static_cast<unsigned int>(std::chrono::high_resolution_clock::now().time_since_epoch().count()));
+    std::uniform_int_distribution<> distColorClaro(0, 3); // Colores disponibles para lado claro (AZUL, VERDE, ROJO, AMARILLO)
+    std::uniform_int_distribution<> distColorOscuro(4, 7); // Colores disponibles para lado oscuro (MORADO, NARANJA, AGUAMARINA, ROSA)
+    std::uniform_int_distribution<> distNumero(1, 9); // Números del 1 al 9
+    std::uniform_int_distribution<> distTipo(0, 9);  // Tipos disponibles
+
+    // Generar cartas para cada combinación de colores (claro y oscuro)
     auto agregarCartasConLados = [&](Color colorClaro, Color colorOscuro) {
         // Números del 1 al 9, dos copias de cada número
         for (int i = 1; i <= 9; ++i) {
@@ -285,7 +292,7 @@ void aplicarEfectoCartaEspecial(const Carta& cartaEspecial, int& indiceJugadorAc
             break;
         case REVERSA:
             direccionNormal = !direccionNormal; // Cambia la dirección del juego
-            std::cout << "¡Dirección cambiada!\n";
+            std::cout << "¡Direccion cambiada!\n";
             break;
         case COMODIN_ROBA_DOS:
             // Efecto principal de "roba dos"
@@ -331,33 +338,33 @@ void aplicarEfectoCartaEspecial(const Carta& cartaEspecial, int& indiceJugadorAc
             indiceJugadorActual = siguienteJugador;
             break;
 
-case ROBO_SALVAJE:
-    std::cout << jugadores[indiceJugadorActual].nombre << " ha jugado Robo Salvaje.\n";
+        case ROBO_SALVAJE:
+            std::cout << jugadores[indiceJugadorActual].nombre << " ha jugado Robo Salvaje.\n";
+        colorElegidoGlobal = seleccionarColor(false); // Siempre seleccionar en modo oscuro
+        std::cout << "Color elegido para el Robo Salvaje: " << obtenerNombreColor(colorElegidoGlobal) << "\n";
 
-    // El jugador elige un color
-    colorElegidoGlobal = seleccionarColor(false); // Siempre seleccionar en modo oscuro
-    std::cout << "Color elegido para el Robo Salvaje: " << colorElegidoGlobal << std::endl;
+        std::cout << jugadores[siguienteJugador].nombre << " debe robar cartas hasta que salga una del color elegido.\n";
+        while (true) {
+            if (mazo.empty()) {
+                std::cout << "El mazo se agotó. El efecto se detiene.\n";
+                break;
+            }
 
-    std::cout << jugadores[siguienteJugador].nombre << " debe robar cartas hasta que salga una del color elegido.\n";
+            Carta cartaRobada = mazo.back();
+            mazo.pop_back();
+            cartaRobada.estaVolteada = true; // Forzar el lado oscuro
+            jugadores[siguienteJugador].mano.push_back(cartaRobada);
+            imprimirCarta(cartaRobada);
 
-    while (true) {
-        if (mazo.empty()) {
-            std::cout << "El mazo se agotó. El efecto se detiene.\n";
-            break;
+            const Lado& ladoRobado = cartaRobada.ladoOscuro;
+            if (ladoRobado.color == colorElegidoGlobal) {
+                std::cout << "¡Carta del color elegido obtenida! Efecto completado.\n";
+                break;
+            }
         }
 
-        // Robar carta del mazo
-        Carta cartaRobada = mazo.back();
-        mazo.pop_back();
-        cartaRobada.estaVolteada = true; // Forzar el lado oscuro
-        jugadores[siguienteJugador].mano.push_back(cartaRobada);
-        // Verificar si el color del lado oscuro coincide con el color elegido
-        const Lado& ladoRobado = cartaRobada.ladoOscuro;
-        if (ladoRobado.color == colorElegidoGlobal) {
-            std::cout << "¡Carta del color elegido obtenida! Efecto completado.\n";
-            break; // Salir del bucle
-        }
-    }
+        indiceJugadorActual = siguienteJugador;
+
 
     // Cambiar al siguiente jugador
     indiceJugadorActual = siguienteJugador;
@@ -391,7 +398,7 @@ void turnoJugador(Jugador& jugador, std::vector<Carta>& mazo, std::vector<Carta>
 
     // Mostrar las cartas solo si el jugador dice "S" o "s"
     if (respuesta == 'S' || respuesta == 's') {
-        std::cout << "Tu mano:\n";
+        std::cout << "Tu mano: \n";
         for (size_t i = 0; i < jugador.mano.size(); ++i) {
             std::cout << i + 1 << ". ";
             imprimirCarta(jugador.mano[i]);
@@ -401,7 +408,7 @@ void turnoJugador(Jugador& jugador, std::vector<Carta>& mazo, std::vector<Carta>
     }
 
     // Mostrar la carta actual en el mazo de descarte
-    std::cout << "Carta en el mazo de descarte: ";
+    std::cout << "Carta en el mazo de descarte:  ";
     imprimirCarta(cartaSuperior);
 
     // Verificar si el jugador tiene exactamente dos cartas y darle la opción de decir "UNO"
@@ -442,7 +449,7 @@ void turnoJugador(Jugador& jugador, std::vector<Carta>& mazo, std::vector<Carta>
                 } else {
                     cartaSuperior.ladoClaro.color = nuevoColor;
                 }
-                std::cout << "Color elegido para el comodín: ";
+                std::cout << "Color elegido para el comodin: ";
                 imprimirCarta(cartaSuperior);
             }
 
@@ -640,8 +647,7 @@ void cicloJuego(std::vector<Jugador>& jugadores, std::vector<Carta>& mazo) {
     direccionNormal = true;
     turnoContinuo = false;
 }
-
-        }
+    }
 
         // Si turnoContinuo es falso, cambia de jugador
        // Cambiar de jugador si turnoContinuo es falso
@@ -676,7 +682,8 @@ int main() {
                 mostrarReglas();
             } else if (opcion == 2) {
                 iniciarJuego = true;
-                    std::vector<Carta> mazo = crearMazo();
+                std::vector<Carta> mazo = crearMazo();
+                barajarMazo(mazo);
 std::cout << "Mazo creado con " << mazo.size() << " cartas.\n";
             } else if (opcion == 3) {
                 return 0;
@@ -689,7 +696,7 @@ std::cout << "Mazo creado con " << mazo.size() << " cartas.\n";
         std::vector<Jugador> jugadores;
         int numJugadores;
 
-        std::cout << "Introduce el número de jugadores (2-10): ";
+        std::cout << "Introduce el numero de jugadores (2-10): ";
         std::cin >> numJugadores;
 
         for (int i = 0; i < numJugadores; ++i) {
