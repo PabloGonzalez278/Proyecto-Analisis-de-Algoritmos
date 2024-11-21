@@ -1,0 +1,1 @@
+/usr/bin/c++ CMakeFiles/Proyecto_Analisis_de_Algoritmos.dir/main.cpp.o -o Proyecto_Analisis_de_Algoritmos

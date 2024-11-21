@@ -1,0 +1,3 @@
+/workspace/Proyecto-Analisis-de-Algoritmos/CMakeFiles/Proyecto_Analisis_de_Algoritmos.dir
+/workspace/Proyecto-Analisis-de-Algoritmos/CMakeFiles/edit_cache.dir
+/workspace/Proyecto-Analisis-de-Algoritmos/CMakeFiles/rebuild_cache.dir

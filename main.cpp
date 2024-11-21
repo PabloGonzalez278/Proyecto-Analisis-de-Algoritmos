@@ -88,17 +88,8 @@ std::string obtenerNombreTipo(Tipo tipo, int numero) {
 }
 
 void setColor(Color color) {
-    switch (color) {
-        case ROJO: std::cout << "\033[31m"; break;
-        case VERDE: std::cout << "\033[32m"; break;
-        case AZUL: std::cout << "\033[34m"; break;
-        case AMARILLO: std::cout << "\033[33m"; break;
-        case MORADO: std::cout << "\033[35m"; break;
-        case NARANJA: std::cout << "\033[33m"; break;
-        case AGUAMARINA: std::cout << "\033[36m"; break;
-        case ROSA: std::cout << "\033[91m"; break;
-        default: std::cout << "\033[0m";
-    }
+
+
 }
 
 void resetColor() {
@@ -266,7 +257,7 @@ void robarCarta(Jugador& jugador, std::vector<Carta>& mazo, int cantidad = 1, bo
         }
 
         jugador.mano.push_back(cartaRobada);
-        imprimirCarta(cartaRobada);
+
     }
 }
 
@@ -576,89 +567,153 @@ int calcularPuntosJugador(const Jugador& jugador) {
     }
     return puntos;
 }
+void aplicarEfectoInicial(Carta& cartaInicial, std::vector<Jugador>& jugadores, std::vector<Carta>& mazo, int& indiceJugadorActual, bool& direccionNormal) {
+    const Lado& ladoActual = cartaInicial.estaVolteada ? cartaInicial.ladoOscuro : cartaInicial.ladoClaro;
+    int siguienteJugador = (indiceJugadorActual + (direccionNormal ? 1 : -1) + jugadores.size()) % jugadores.size();
+
+    switch (ladoActual.tipo) {
+
+
+        case COMODIN_ROBA_DOS:
+            std::cout << jugadores[indiceJugadorActual].nombre << " ha recibido un comodín roba dos al inicio. Debe elegir un color.\n";
+            colorElegidoGlobal = seleccionarColor(!modoOscuro);
+            std::cout << "El color elegido es: " << obtenerNombreColor(colorElegidoGlobal) << "\n";
+            robarCarta(jugadores[siguienteJugador], mazo, 2); // El siguiente jugador roba dos cartas
+            indiceJugadorActual = siguienteJugador;
+            break;
+
+        case ROBA_UNO:
+            robarCarta(jugadores[siguienteJugador], mazo);
+            indiceJugadorActual = siguienteJugador;
+            break;
+
+        case PIERDE_TURNO:
+            indiceJugadorActual = siguienteJugador; // Salta al siguiente jugador
+            break;
+
+        case REVERSA:
+            direccionNormal = !direccionNormal; // Cambia la dirección del juego
+            std::cout << "¡Dirección cambiada!\n";
+
+            // Si se invierte la dirección, el siguiente jugador es el último
+            if (!direccionNormal) {
+                indiceJugadorActual = jugadores.size() - 1;
+            } else {
+                indiceJugadorActual = siguienteJugador;
+            }
+            break;
+
+        case ROBA_CINCO:
+            robarCarta(jugadores[siguienteJugador], mazo, 5); // El siguiente jugador roba 5 cartas
+            indiceJugadorActual = siguienteJugador;
+            break;
+
+
+        default:
+            std::cout << "No hay efecto inicial por la carta: ";
+            imprimirCarta(cartaInicial);
+            break;
+    }
+}
+
+
 
 
 void cicloJuego(std::vector<Jugador>& jugadores, std::vector<Carta>& mazo) {
     std::vector<Carta> pilaDescarte;
+
+    // Asegurarse de que la carta inicial no sea FLIP
+    while (!mazo.empty() && (mazo.back().ladoClaro.tipo == FLIP || mazo.back().ladoOscuro.tipo == FLIP)  || !mazo.empty() && (mazo.back().ladoClaro.tipo == COMODIN || mazo.back().ladoOscuro.tipo == COMODIN)) {
+        std::cout << "La carta inicial era FLIP o COMODIN. Reembarajando...\n";
+        barajarMazo(mazo);
+    }
+
     pilaDescarte.push_back(mazo.back());
     mazo.pop_back();
     Carta cartaSuperior = pilaDescarte.back();
 
     int indiceJugadorActual = 0;
     bool direccionNormal = true;
-    bool turnoContinuo = false; // Se mantiene fuera del bucle para recordar el estado
+    bool turnoContinuo = false;
+
+    // Mostrar la carta de descarte al inicio del juego
+    std::cout << "\nLa carta inicial en el mazo de descarte es: ";
+    imprimirCarta(cartaSuperior);
+
+    // Aplicar efecto inicial de la carta
+    aplicarEfectoInicial(cartaSuperior, jugadores, mazo, indiceJugadorActual, direccionNormal);
 
     while (true) {
         Jugador& jugadorActual = jugadores[indiceJugadorActual];
         std::cout << "\nTurno de: " << jugadorActual.nombre << "\n";
+
+        // Mostrar la carta de descarte en cada turno
+        std::cout << "Carta actual en el mazo de descarte: ";
+        imprimirCarta(cartaSuperior);
+
         mostrarCartasJugadores(jugadores);
 
         if (jugadorActual.esSintetico) {
-            // Llamada corregida
             turnoBot(jugadorActual, mazo, pilaDescarte, cartaSuperior, indiceJugadorActual, jugadores, direccionNormal, turnoContinuo);
         } else {
             turnoJugador(jugadorActual, mazo, pilaDescarte, cartaSuperior, jugadores, indiceJugadorActual, direccionNormal, turnoContinuo);
         }
 
-      if (jugadorActual.mano.empty()) {
-    // El jugador ha ganado la ronda
-    std::cout << jugadorActual.nombre << " ha ganado la ronda!\n";
+        if (jugadorActual.mano.empty()) {
+            // El jugador ha ganado la ronda
+            std::cout << jugadorActual.nombre << " ha ganado la ronda!\n";
 
-    // Calcular los puntos totales de las manos de los demás jugadores
-    int puntosRonda = 0;
-    for (const Jugador& jugador : jugadores) {
-        if (jugador.nombre != jugadorActual.nombre) {
-            puntosRonda += calcularPuntosJugador(jugador);
+            // Calcular puntos de la ronda
+            int puntosRonda = 0;
+            for (const Jugador& jugador : jugadores) {
+                if (jugador.nombre != jugadorActual.nombre) {
+                    puntosRonda += calcularPuntosJugador(jugador);
+                }
+            }
+
+            // Sumar puntos al jugador ganador
+            jugadorActual.puntos += puntosRonda;
+
+            std::cout << jugadorActual.nombre << " tiene ahora " << jugadorActual.puntos << " puntos.\n";
+
+            if (jugadorActual.puntos >= 500) {
+                std::cout << jugadorActual.nombre << " ha alcanzado 500 puntos y gana el juego!\n";
+                return; // Terminar el juego
+            }
+
+            // Reiniciar el juego
+            std::cout << "Iniciando una nueva ronda...\n";
+            for (Jugador& jugador : jugadores) {
+                jugador.mano.clear();
+            }
+
+            mazo = crearMazo();
+            barajarMazo(mazo);
+            repartirCartas(jugadores, mazo, 7);
+
+            pilaDescarte.clear();
+            pilaDescarte.push_back(mazo.back());
+            mazo.pop_back();
+            cartaSuperior = pilaDescarte.back();
+
+            indiceJugadorActual = 0;
+            direccionNormal = true;
+            turnoContinuo = false;
+
+            std::cout << "\nLa nueva carta inicial en el mazo de descarte es: ";
+            imprimirCarta(cartaSuperior);
+
+            aplicarEfectoInicial(cartaSuperior, jugadores, mazo, indiceJugadorActual, direccionNormal);
+        }
+
+        if (!turnoContinuo) {
+            indiceJugadorActual = (indiceJugadorActual + (direccionNormal ? 1 : -1) + jugadores.size()) % jugadores.size();
+        } else {
+            turnoContinuo = false;
         }
     }
-
-    // Sumar los puntos al jugador ganador
-    jugadorActual.puntos += puntosRonda;
-
-    // Mostrar los puntos obtenidos y el puntaje total
-    std::cout << jugadorActual.nombre << " ha ganado " << puntosRonda << " puntos en esta ronda.\n";
-    std::cout << jugadorActual.nombre << " tiene ahora " << jugadorActual.puntos << " puntos.\n";
-
-    // Verificar si el jugador ha alcanzado 500 puntos
-    if (jugadorActual.puntos >= 500) {
-        std::cout << jugadorActual.nombre << " ha alcanzado 500 puntos y gana el juego!\n";
-        return; // Terminar el juego
-    }
-
-    // Si nadie alcanzó 500 puntos, reiniciar la ronda
-    std::cout << "Iniciando una nueva ronda...\n";
-
-    // Vaciar las manos de todos los jugadores
-    for (Jugador& jugador : jugadores) {
-        jugador.mano.clear();
-    }
-
-    // Crear un nuevo mazo y repartir cartas
-    mazo = crearMazo();
-    barajarMazo(mazo);
-    repartirCartas(jugadores, mazo, 7);
-
-    // Restablecer las variables para la nueva ronda
-    pilaDescarte.clear();
-    pilaDescarte.push_back(mazo.back());
-    mazo.pop_back();
-    cartaSuperior = pilaDescarte.back();
-    indiceJugadorActual = 0;
-    direccionNormal = true;
-    turnoContinuo = false;
-}
-    }
-
-        // Si turnoContinuo es falso, cambia de jugador
-       // Cambiar de jugador si turnoContinuo es falso
-if (!turnoContinuo) {
-    indiceJugadorActual = (indiceJugadorActual + (direccionNormal ? 1 : -1) + jugadores.size()) % jugadores.size();
-} else {
-    // Resetea turnoContinuo para que no se repita automáticamente en el próximo turno
-    turnoContinuo = false;
 }
 
-    }
 
 
 int main() {
