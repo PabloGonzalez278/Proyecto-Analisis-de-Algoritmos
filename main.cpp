@@ -257,9 +257,9 @@ void robarCarta(Jugador& jugador, std::vector<Carta>& mazo, int cantidad = 1, bo
         }
 
         jugador.mano.push_back(cartaRobada);
-
     }
 }
+
 
 
 void aplicarEfectoCartaEspecial(const Carta& cartaEspecial, int& indiceJugadorActual, std::vector<Jugador>& jugadores, std::vector<Carta>& mazo, bool& direccionNormal, bool& turnoContinuo) {
