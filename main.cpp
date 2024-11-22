@@ -331,7 +331,7 @@ void aplicarEfectoCartaEspecial(const Carta& cartaEspecial, int& indiceJugadorAc
                 }
             } else {
                 // Si el siguiente jugador es humano, se le pregunta si desea desafiar
-                std::cout << jugadores[siguienteJugador].nombre << ", ¿quieres desafiar a " << jugadores[indiceJugadorActual].nombre << "? (s/n): ";
+                std::cout << jugadores[siguienteJugador].nombre << ", quieres desafiar a " << jugadores[indiceJugadorActual].nombre << " (s/n): ";
                 char respuesta;
                 std::cin >> respuesta;
 
