@@ -233,15 +233,23 @@ void imprimirCarta(const Carta& carta) {
     }
 }
 void voltearTodasLasCartas(std::vector<Jugador>& jugadores, std::vector<Carta>& pilaDescarte) {
+    // Cambia el estado global del modo oscuro
     modoOscuro = !modoOscuro;
+
+    // Voltear todas las cartas de los jugadores
     for (Jugador& jugador : jugadores) {
         for (Carta& carta : jugador.mano) {
             carta.estaVolteada = modoOscuro;
         }
     }
+
+    // Voltear todas las cartas en la pila de descarte
     for (Carta& carta : pilaDescarte) {
         carta.estaVolteada = modoOscuro;
     }
+
+    std::cout << "¡Todas las cartas han sido volteadas! Ahora están en modo "
+              << (modoOscuro ? "oscuro" : "claro") << ".\n";
 }
 
 void robarCarta(Jugador& jugador, std::vector<Carta>& mazo, int cantidad = 1, bool forzarOscuro = false) {
@@ -257,6 +265,11 @@ void robarCarta(Jugador& jugador, std::vector<Carta>& mazo, int cantidad = 1, bo
         }
 
         jugador.mano.push_back(cartaRobada);
+
+        // Verificar si el jugador es humano antes de mostrar la carta robada
+        if (!jugador.esSintetico) {
+            imprimirCarta(cartaRobada);
+        }
     }
 }
 
