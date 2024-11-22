@@ -38,7 +38,6 @@ struct Jugador {
     int puntos = 0; // Puntos acumulados del jugador
 };
 
-
 void abrirEnlace(const std::string& url) {
 #if defined(_WIN32)
     ShellExecute(0, 0, url.c_str(), 0, 0, SW_SHOWNORMAL);
@@ -89,13 +88,13 @@ std::string obtenerNombreTipo(Tipo tipo, int numero) {
 
 void setColor(Color color) {
 
-
 }
 
 void resetColor() {
     std::cout << "\033[0m";
 }
-    std::vector<Carta> crearMazo() {
+
+std::vector<Carta> crearMazo() {
     std::vector<Carta> mazo;
 
     // Usar un generador aleatorio para decidir la cantidad de cada carta
@@ -216,6 +215,7 @@ Color seleccionarColor(bool ladoClaro) {
 void voltearCarta(Carta& carta) {
     carta.estaVolteada = !carta.estaVolteada;
 }
+
 void imprimirCarta(const Carta& carta) {
     const Lado& ladoActual = carta.estaVolteada ? carta.ladoOscuro : carta.ladoClaro;
 
@@ -232,6 +232,7 @@ void imprimirCarta(const Carta& carta) {
         }
     }
 }
+
 void voltearTodasLasCartas(std::vector<Jugador>& jugadores, std::vector<Carta>& pilaDescarte) {
     modoOscuro = !modoOscuro;
     for (Jugador& jugador : jugadores) {
@@ -257,10 +258,8 @@ void robarCarta(Jugador& jugador, std::vector<Carta>& mazo, int cantidad = 1, bo
         }
 
         jugador.mano.push_back(cartaRobada);
-
     }
 }
-
 
 void aplicarEfectoCartaEspecial(const Carta& cartaEspecial, int& indiceJugadorActual, std::vector<Jugador>& jugadores, std::vector<Carta>& mazo, bool& direccionNormal, bool& turnoContinuo) {
     int siguienteJugador = (indiceJugadorActual + (direccionNormal ? 1 : -1) + jugadores.size()) % jugadores.size();
@@ -277,7 +276,7 @@ void aplicarEfectoCartaEspecial(const Carta& cartaEspecial, int& indiceJugadorAc
         case PIERDE_TURNO:
             indiceJugadorActual = siguienteJugador; // Salta al siguiente jugador
             break;
-            case SALTO_A_TODOS:
+        case SALTO_A_TODOS:
             std::cout << "¡SALTO A TODOS jugado! El jugador actual puede jugar otra carta.\n";
             turnoContinuo = true; // Permite que el jugador juegue otra carta en el mismo turno
             break;
@@ -328,41 +327,35 @@ void aplicarEfectoCartaEspecial(const Carta& cartaEspecial, int& indiceJugadorAc
             robarCarta(jugadores[siguienteJugador], mazo, 5);
             indiceJugadorActual = siguienteJugador;
             break;
-
         case ROBO_SALVAJE:
             std::cout << jugadores[indiceJugadorActual].nombre << " ha jugado Robo Salvaje.\n";
-        colorElegidoGlobal = seleccionarColor(false); // Siempre seleccionar en modo oscuro
-        std::cout << "Color elegido para el Robo Salvaje: " << obtenerNombreColor(colorElegidoGlobal) << "\n";
+            colorElegidoGlobal = seleccionarColor(false); // Siempre seleccionar en modo oscuro
+            std::cout << "Color elegido para el Robo Salvaje: " << obtenerNombreColor(colorElegidoGlobal) << "\n";
 
-        std::cout << jugadores[siguienteJugador].nombre << " debe robar cartas hasta que salga una del color elegido.\n";
-        while (true) {
-            if (mazo.empty()) {
-                std::cout << "El mazo se agotó. El efecto se detiene.\n";
-                break;
+            std::cout << jugadores[siguienteJugador].nombre << " debe robar cartas hasta que salga una del color elegido.\n";
+            while (true) {
+                if (mazo.empty()) {
+                    std::cout << "El mazo se agotó. El efecto se detiene.\n";
+                    break;
+                }
+
+                Carta cartaRobada = mazo.back();
+                mazo.pop_back();
+                cartaRobada.estaVolteada = true; // Forzar el lado oscuro
+                jugadores[siguienteJugador].mano.push_back(cartaRobada);
+                imprimirCarta(cartaRobada);
+
+                const Lado& ladoRobado = cartaRobada.ladoOscuro;
+                if (ladoRobado.color == colorElegidoGlobal) {
+                    std::cout << "¡Carta del color elegido obtenida! Efecto completado.\n";
+                    break;
+                }
             }
 
-            Carta cartaRobada = mazo.back();
-            mazo.pop_back();
-            cartaRobada.estaVolteada = true; // Forzar el lado oscuro
-            jugadores[siguienteJugador].mano.push_back(cartaRobada);
-            imprimirCarta(cartaRobada);
-
-            const Lado& ladoRobado = cartaRobada.ladoOscuro;
-            if (ladoRobado.color == colorElegidoGlobal) {
-                std::cout << "¡Carta del color elegido obtenida! Efecto completado.\n";
-                break;
-            }
-        }
-
-        indiceJugadorActual = siguienteJugador;
-
-
-    // Cambiar al siguiente jugador
-    indiceJugadorActual = siguienteJugador;
-    break;
+            indiceJugadorActual = siguienteJugador;
+            break;
     }
 }
-
 
 void mostrarCartasJugadores(const std::vector<Jugador>& jugadores) {
     for (const Jugador& jugador : jugadores) {
@@ -384,7 +377,7 @@ void turnoJugador(Jugador& jugador, std::vector<Carta>& mazo, std::vector<Carta>
 
     // Preguntar si el jugador quiere ver sus cartas
     char respuesta;
-    std::cout << "¿Quieres ver tus cartas? (S/N): ";
+    std::cout << "Quieres ver tus cartas? (S/N): ";
     std::cin >> respuesta;
 
     // Mostrar las cartas solo si el jugador dice "S" o "s"
@@ -476,7 +469,7 @@ void turnoJugador(Jugador& jugador, std::vector<Carta>& mazo, std::vector<Carta>
     }
 }
 
-   void turnoBot(Jugador& jugador, std::vector<Carta>& mazo, std::vector<Carta>& pilaDescarte, Carta& cartaSuperior, int& indiceJugadorActual, std::vector<Jugador>& jugadores, bool& direccionNormal, bool& turnoContinuo) {
+void turnoBot(Jugador& jugador, std::vector<Carta>& mazo, std::vector<Carta>& pilaDescarte, Carta& cartaSuperior, int& indiceJugadorActual, std::vector<Jugador>& jugadores, bool& direccionNormal, bool& turnoContinuo) {
     std::cout << "\nLe toca al jugador (Bot): " << jugador.nombre << "\n";
 
     // Mostrar la carta actual en el mazo de descarte
@@ -542,7 +535,6 @@ void turnoJugador(Jugador& jugador, std::vector<Carta>& mazo, std::vector<Carta>
     }
 }
 
-
 int calcularPuntos(const Carta& carta) {
     const Lado& ladoActual = carta.estaVolteada ? carta.ladoOscuro : carta.ladoClaro;
 
@@ -560,6 +552,7 @@ int calcularPuntos(const Carta& carta) {
         default: return 0;
     }
 }
+
 int calcularPuntosJugador(const Jugador& jugador) {
     int puntos = 0;
     for (const Carta& carta : jugador.mano) {
@@ -567,13 +560,12 @@ int calcularPuntosJugador(const Jugador& jugador) {
     }
     return puntos;
 }
+
 void aplicarEfectoInicial(Carta& cartaInicial, std::vector<Jugador>& jugadores, std::vector<Carta>& mazo, int& indiceJugadorActual, bool& direccionNormal) {
     const Lado& ladoActual = cartaInicial.estaVolteada ? cartaInicial.ladoOscuro : cartaInicial.ladoClaro;
     int siguienteJugador = (indiceJugadorActual + (direccionNormal ? 1 : -1) + jugadores.size()) % jugadores.size();
 
     switch (ladoActual.tipo) {
-
-
         case COMODIN_ROBA_DOS:
             std::cout << jugadores[indiceJugadorActual].nombre << " ha recibido un comodín roba dos al inicio. Debe elegir un color.\n";
             colorElegidoGlobal = seleccionarColor(!modoOscuro);
@@ -581,16 +573,13 @@ void aplicarEfectoInicial(Carta& cartaInicial, std::vector<Jugador>& jugadores, 
             robarCarta(jugadores[siguienteJugador], mazo, 2); // El siguiente jugador roba dos cartas
             indiceJugadorActual = siguienteJugador;
             break;
-
         case ROBA_UNO:
             robarCarta(jugadores[siguienteJugador], mazo);
             indiceJugadorActual = siguienteJugador;
             break;
-
         case PIERDE_TURNO:
             indiceJugadorActual = siguienteJugador; // Salta al siguiente jugador
             break;
-
         case REVERSA:
             direccionNormal = !direccionNormal; // Cambia la dirección del juego
             std::cout << "¡Dirección cambiada!\n";
@@ -602,22 +591,16 @@ void aplicarEfectoInicial(Carta& cartaInicial, std::vector<Jugador>& jugadores, 
                 indiceJugadorActual = siguienteJugador;
             }
             break;
-
         case ROBA_CINCO:
             robarCarta(jugadores[siguienteJugador], mazo, 5); // El siguiente jugador roba 5 cartas
             indiceJugadorActual = siguienteJugador;
             break;
-
-
         default:
             std::cout << "No hay efecto inicial por la carta: ";
             imprimirCarta(cartaInicial);
             break;
     }
 }
-
-
-
 
 void cicloJuego(std::vector<Jugador>& jugadores, std::vector<Carta>& mazo) {
     std::vector<Carta> pilaDescarte;
@@ -714,8 +697,6 @@ void cicloJuego(std::vector<Jugador>& jugadores, std::vector<Carta>& mazo) {
     }
 }
 
-
-
 int main() {
     unsigned int seed = static_cast<unsigned int>(std::chrono::high_resolution_clock::now().time_since_epoch().count());
     std::srand(seed);
@@ -739,7 +720,7 @@ int main() {
                 iniciarJuego = true;
                 std::vector<Carta> mazo = crearMazo();
                 barajarMazo(mazo);
-std::cout << "Mazo creado con " << mazo.size() << " cartas.\n";
+                std::cout << "Mazo creado con " << mazo.size() << " cartas.\n";
             } else if (opcion == 3) {
                 return 0;
             } else {
