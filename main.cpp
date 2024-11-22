@@ -87,14 +87,6 @@ std::string obtenerNombreTipo(Tipo tipo, int numero) {
     }
 }
 
-void setColor(Color color) {
-
-
-}
-
-void resetColor() {
-    std::cout << "\033[0m";
-}
     std::vector<Carta> crearMazo() {
     std::vector<Carta> mazo;
 
@@ -156,7 +148,7 @@ void resetColor() {
             false
         });
         mazo.push_back({
-            {NINGUNO, COMODIN_ROBA_DOS, -1}, // Lado claro: Comodín roba 2
+            {NINGUNO, COMODIN_ROBA_DOS, -1}, // Lado claro: Comodinn roba 2
             {NINGUNO, ROBO_SALVAJE, -1},    // Lado oscuro: Robo Salvaje
             false
         });
@@ -220,15 +212,13 @@ void imprimirCarta(const Carta& carta) {
     const Lado& ladoActual = carta.estaVolteada ? carta.ladoOscuro : carta.ladoClaro;
 
     if ((ladoActual.tipo == COMODIN || ladoActual.tipo == COMODIN_ROBA_DOS) && ladoActual.color != NINGUNO) {
-        std::cout << "Color elegido para el comodín: " << obtenerNombreColor(ladoActual.color) << std::endl;
+        std::cout << "Color elegido para el comodinn: " << obtenerNombreColor(ladoActual.color) << std::endl;
     } else {
         if (ladoActual.tipo == COMODIN || ladoActual.tipo == COMODIN_ROBA_DOS) {
             std::cout << obtenerNombreTipo(ladoActual.tipo, ladoActual.numero) << std::endl;
         } else {
-            setColor(ladoActual.color);
             std::cout << obtenerNombreColor(ladoActual.color) << " "
                       << obtenerNombreTipo(ladoActual.tipo, ladoActual.numero) << std::endl;
-            resetColor();
         }
     }
 }
@@ -290,7 +280,7 @@ void aplicarEfectoCartaEspecial(const Carta& cartaEspecial, int& indiceJugadorAc
         case PIERDE_TURNO:
             indiceJugadorActual = siguienteJugador; // Salta al siguiente jugador
             break;
-        case SALTO_A_TODOS:
+            case SALTO_A_TODOS:
             std::cout << "¡SALTO A TODOS jugado! El jugador actual puede jugar otra carta.\n";
             turnoContinuo = true; // Permite que el jugador juegue otra carta en el mismo turno
             break;
@@ -302,12 +292,13 @@ void aplicarEfectoCartaEspecial(const Carta& cartaEspecial, int& indiceJugadorAc
             // Efecto principal de "roba dos"
             std::cout << jugadores[siguienteJugador].nombre << " tiene que robar 2 cartas... ";
 
-            // Verificar si el siguiente jugador es un bot
-            if (jugadores[siguienteJugador].esSintetico) {
-                // El bot decide si desafiar
-                bool desafiar = false;
+            // Preguntar al siguiente jugador si desea desafiar
+            std::cout << jugadores[siguienteJugador].nombre << ", ¿quieres desafiar a " << jugadores[indiceJugadorActual].nombre << "? (s/n): ";
+            char respuesta;
+            std::cin >> respuesta;
 
-                // Verificar si el jugador actual tiene cartas del mismo color que la del mazo de descarte
+            if (respuesta == 's' || respuesta == 'S') {
+                // Verificar si el jugador actual tenía cartas del mismo color que la del mazo de descarte
                 bool tieneColorIgual = false;
                 Color colorDescarte = cartaEspecial.estaVolteada ? cartaEspecial.ladoOscuro.color : cartaEspecial.ladoClaro.color;
 
@@ -319,59 +310,19 @@ void aplicarEfectoCartaEspecial(const Carta& cartaEspecial, int& indiceJugadorAc
                     }
                 }
 
-                // Lógica del bot para desafiar (50% de desafío si no tiene el mismo color)
-                if (!tieneColorIgual) {
-                    desafiar = (std::rand() % 2 == 0); // 50% de probabilidad de desafiar si no tiene color igual
-                }
-
-                if (desafiar) {
-                    if (tieneColorIgual) {
-                        // El jugador actual jugó la carta ilegalmente
-                        std::cout << jugadores[indiceJugadorActual].nombre << " tenia cartas del color " << obtenerNombreColor(colorDescarte) << " y jugo ilegalmente.\n";
-                        std::cout << jugadores[indiceJugadorActual].nombre << " roba 2 cartas como penalizacion.\n";
-                        robarCarta(jugadores[indiceJugadorActual], mazo, 2);
-                    } else {
-                        // El jugador actual no tenía cartas del color, el retador pierde el desafío
-                        std::cout << jugadores[siguienteJugador].nombre << " desafio incorrectamente. ¡Debe robar 4 cartas!\n";
-                        robarCarta(jugadores[siguienteJugador], mazo, 4);
-                    }
+                if (tieneColorIgual) {
+                    // El jugador actual jugó la carta ilegalmente
+                    std::cout << jugadores[indiceJugadorActual].nombre << " tenia cartas del color " << obtenerNombreColor(colorDescarte) << " y jugo ilegalmente.\n";
+                    std::cout << jugadores[indiceJugadorActual].nombre << " roba 2 cartas como penalizacion.\n";
+                    robarCarta(jugadores[indiceJugadorActual], mazo, 2);
                 } else {
-                    // Si el bot no desafía, aplica el efecto normal
-                    robarCarta(jugadores[siguienteJugador], mazo, 2);
+                    // El jugador actual no tenía cartas del color, el retador pierde el desafío
+                    std::cout << jugadores[siguienteJugador].nombre << " desafio incorrectamente. ¡Debe robar 4 cartas!\n";
+                    robarCarta(jugadores[siguienteJugador], mazo, 4);
                 }
             } else {
-                // Si el siguiente jugador es humano, se le pregunta si desea desafiar
-                std::cout << jugadores[siguienteJugador].nombre << ", ¿quieres desafiar a " << jugadores[indiceJugadorActual].nombre << "? (s/n): ";
-                char respuesta;
-                std::cin >> respuesta;
-
-                if (respuesta == 's' || respuesta == 'S') {
-                    // Verificar si el jugador actual tenía cartas del mismo color que la del mazo de descarte
-                    bool tieneColorIgual = false;
-                    Color colorDescarte = cartaEspecial.estaVolteada ? cartaEspecial.ladoOscuro.color : cartaEspecial.ladoClaro.color;
-
-                    for (const Carta& carta : jugadores[indiceJugadorActual].mano) {
-                        const Lado& ladoMano = carta.estaVolteada ? carta.ladoOscuro : carta.ladoClaro;
-                        if (ladoMano.color == colorDescarte) {
-                            tieneColorIgual = true;
-                            break;
-                        }
-                    }
-
-                    if (tieneColorIgual) {
-                        // El jugador actual jugó la carta ilegalmente
-                        std::cout << jugadores[indiceJugadorActual].nombre << " tenia cartas del color " << obtenerNombreColor(colorDescarte) << " y jugo ilegalmente.\n";
-                        std::cout << jugadores[indiceJugadorActual].nombre << " roba 2 cartas como penalizacion.\n";
-                        robarCarta(jugadores[indiceJugadorActual], mazo, 2);
-                    } else {
-                        // El jugador actual no tenía cartas del color, el retador pierde el desafío
-                        std::cout << jugadores[siguienteJugador].nombre << " desafio incorrectamente. ¡Debe robar 4 cartas!\n";
-                        robarCarta(jugadores[siguienteJugador], mazo, 4);
-                    }
-                } else {
-                    // Si no hay desafío, aplica el efecto normal
-                    robarCarta(jugadores[siguienteJugador], mazo, 2);
-                }
+                // Si no hay desafío, aplica el efecto normal
+                robarCarta(jugadores[siguienteJugador], mazo, 2);
             }
 
             indiceJugadorActual = siguienteJugador;
@@ -383,31 +334,35 @@ void aplicarEfectoCartaEspecial(const Carta& cartaEspecial, int& indiceJugadorAc
 
         case ROBO_SALVAJE:
             std::cout << jugadores[indiceJugadorActual].nombre << " ha jugado Robo Salvaje.\n";
-            colorElegidoGlobal = seleccionarColor(false); // Siempre seleccionar en modo oscuro
-            std::cout << "Color elegido para el Robo Salvaje: " << obtenerNombreColor(colorElegidoGlobal) << "\n";
+        colorElegidoGlobal = seleccionarColor(false); // Siempre seleccionar en modo oscuro
+        std::cout << "Color elegido para el Robo Salvaje: " << obtenerNombreColor(colorElegidoGlobal) << "\n";
 
-            std::cout << jugadores[siguienteJugador].nombre << " debe robar cartas hasta que salga una del color elegido.\n";
-            while (true) {
-                if (mazo.empty()) {
-                    std::cout << "El mazo se agotó. El efecto se detiene.\n";
-                    break;
-                }
-
-                Carta cartaRobada = mazo.back();
-                mazo.pop_back();
-                cartaRobada.estaVolteada = true; // Forzar el lado oscuro
-                jugadores[siguienteJugador].mano.push_back(cartaRobada);
-                imprimirCarta(cartaRobada);
-
-                const Lado& ladoRobado = cartaRobada.ladoOscuro;
-                if (ladoRobado.color == colorElegidoGlobal) {
-                    std::cout << "¡Carta del color elegido obtenida! Efecto completado.\n";
-                    break;
-                }
+        std::cout << jugadores[siguienteJugador].nombre << " debe robar cartas hasta que salga una del color elegido.\n";
+        while (true) {
+            if (mazo.empty()) {
+                std::cout << "El mazo se agotó. El efecto se detiene.\n";
+                break;
             }
 
-            indiceJugadorActual = siguienteJugador;
-            break;
+            Carta cartaRobada = mazo.back();
+            mazo.pop_back();
+            cartaRobada.estaVolteada = true; // Forzar el lado oscuro
+            jugadores[siguienteJugador].mano.push_back(cartaRobada);
+            imprimirCarta(cartaRobada);
+
+            const Lado& ladoRobado = cartaRobada.ladoOscuro;
+            if (ladoRobado.color == colorElegidoGlobal) {
+                std::cout << "¡Carta del color elegido obtenida! Efecto completado.\n";
+                break;
+            }
+        }
+
+        indiceJugadorActual = siguienteJugador;
+
+
+    // Cambiar al siguiente jugador
+    indiceJugadorActual = siguienteJugador;
+    break;
     }
 }
 
@@ -542,7 +497,7 @@ void turnoJugador(Jugador& jugador, std::vector<Carta>& mazo, std::vector<Carta>
 
             // Aplicar efectos de cartas especiales
             if (cartaElegida.ladoClaro.tipo == COMODIN || cartaElegida.ladoClaro.tipo == COMODIN_ROBA_DOS || cartaElegida.ladoOscuro.tipo == ROBO_SALVAJE) {
-                // Seleccionar un color aleatorio para el comodín
+                // Seleccionar un color aleatorio para el comodinn
                 bool ladoClaro = !cartaElegida.estaVolteada;
                 Color colorElegido = static_cast<Color>(std::rand() % 4 + (ladoClaro ? ROJO : MORADO));
                 if (modoOscuro) {
@@ -550,7 +505,7 @@ void turnoJugador(Jugador& jugador, std::vector<Carta>& mazo, std::vector<Carta>
                 } else {
                     cartaSuperior.ladoClaro.color = colorElegido;
                 }
-                std::cout << jugador.nombre << " ha elegido el color " << obtenerNombreColor(colorElegido) << " para el comodín.\n";
+                std::cout << jugador.nombre << " ha elegido el color " << obtenerNombreColor(colorElegido) << " para el comodinn.\n";
             }
 
             if (cartaElegida.ladoClaro.tipo == FLIP || cartaElegida.ladoOscuro.tipo == FLIP) {
@@ -623,7 +578,7 @@ void aplicarEfectoInicial(Carta& cartaInicial, std::vector<Jugador>& jugadores, 
 
 
         case COMODIN_ROBA_DOS:
-            std::cout << jugadores[indiceJugadorActual].nombre << " ha recibido un comodín roba dos al inicio. Debe elegir un color.\n";
+            std::cout << jugadores[indiceJugadorActual].nombre << " ha recibido un comodin roba dos al inicio. Debe elegir un color.\n";
             colorElegidoGlobal = seleccionarColor(!modoOscuro);
             std::cout << "El color elegido es: " << obtenerNombreColor(colorElegidoGlobal) << "\n";
             robarCarta(jugadores[siguienteJugador], mazo, 2); // El siguiente jugador roba dos cartas
