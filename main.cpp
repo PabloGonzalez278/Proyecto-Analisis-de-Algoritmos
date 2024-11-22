@@ -292,13 +292,12 @@ void aplicarEfectoCartaEspecial(const Carta& cartaEspecial, int& indiceJugadorAc
             // Efecto principal de "roba dos"
             std::cout << jugadores[siguienteJugador].nombre << " tiene que robar 2 cartas... ";
 
-            // Preguntar al siguiente jugador si desea desafiar
-            std::cout << jugadores[siguienteJugador].nombre << ", quieres desafiar a " << jugadores[indiceJugadorActual].nombre << "? (s/n): ";
-            char respuesta;
-            std::cin >> respuesta;
+            // Verificar si el siguiente jugador es un bot
+            if (jugadores[siguienteJugador].esSintetico) {
+                // El bot decide si desafiar
+                bool desafiar = false;
 
-            if (respuesta == 's' || respuesta == 'S') {
-                // Verificar si el jugador actual tenia cartas del mismo color que la del mazo de descarte
+                // Verificar si el jugador actual tiene cartas del mismo color que la del mazo de descarte
                 bool tieneColorIgual = false;
                 Color colorDescarte = cartaEspecial.estaVolteada ? cartaEspecial.ladoOscuro.color : cartaEspecial.ladoClaro.color;
 
@@ -310,19 +309,59 @@ void aplicarEfectoCartaEspecial(const Carta& cartaEspecial, int& indiceJugadorAc
                     }
                 }
 
-                if (tieneColorIgual) {
-                    // El jugador actual jugó la carta ilegalmente
-                    std::cout << jugadores[indiceJugadorActual].nombre << " tenia cartas del color " << obtenerNombreColor(colorDescarte) << " y jugo ilegalmente.\n";
-                    std::cout << jugadores[indiceJugadorActual].nombre << " roba 2 cartas como penalizacion.\n";
-                    robarCarta(jugadores[indiceJugadorActual], mazo, 2);
+                // Lógica del bot para desafiar (50% de desafío si no tiene el mismo color)
+                if (!tieneColorIgual) {
+                    desafiar = (std::rand() % 2 == 0); // 50% de probabilidad de desafiar si no tiene color igual
+                }
+
+                if (desafiar) {
+                    if (tieneColorIgual) {
+                        // El jugador actual jugó la carta ilegalmente
+                        std::cout << jugadores[indiceJugadorActual].nombre << " tenia cartas del color " << obtenerNombreColor(colorDescarte) << " y jugo ilegalmente.\n";
+                        std::cout << jugadores[indiceJugadorActual].nombre << " roba 2 cartas como penalizacion.\n";
+                        robarCarta(jugadores[indiceJugadorActual], mazo, 2);
+                    } else {
+                        // El jugador actual no tenía cartas del color, el retador pierde el desafío
+                        std::cout << jugadores[siguienteJugador].nombre << " desafio incorrectamente. ¡Debe robar 4 cartas!\n";
+                        robarCarta(jugadores[siguienteJugador], mazo, 4);
+                    }
                 } else {
-                    // El jugador actual no tenia cartas del color, el retador pierde el desafio
-                    std::cout << jugadores[siguienteJugador].nombre << " desafio incorrectamente. ¡Debe robar 4 cartas!\n";
-                    robarCarta(jugadores[siguienteJugador], mazo, 4);
+                    // Si el bot no desafía, aplica el efecto normal
+                    robarCarta(jugadores[siguienteJugador], mazo, 2);
                 }
             } else {
-                // Si no hay desafio, aplica el efecto normal
-                robarCarta(jugadores[siguienteJugador], mazo, 2);
+                // Si el siguiente jugador es humano, se le pregunta si desea desafiar
+                std::cout << jugadores[siguienteJugador].nombre << ", ¿quieres desafiar a " << jugadores[indiceJugadorActual].nombre << "? (s/n): ";
+                char respuesta;
+                std::cin >> respuesta;
+
+                if (respuesta == 's' || respuesta == 'S') {
+                    // Verificar si el jugador actual tenía cartas del mismo color que la del mazo de descarte
+                    bool tieneColorIgual = false;
+                    Color colorDescarte = cartaEspecial.estaVolteada ? cartaEspecial.ladoOscuro.color : cartaEspecial.ladoClaro.color;
+
+                    for (const Carta& carta : jugadores[indiceJugadorActual].mano) {
+                        const Lado& ladoMano = carta.estaVolteada ? carta.ladoOscuro : carta.ladoClaro;
+                        if (ladoMano.color == colorDescarte) {
+                            tieneColorIgual = true;
+                            break;
+                        }
+                    }
+
+                    if (tieneColorIgual) {
+                        // El jugador actual jugó la carta ilegalmente
+                        std::cout << jugadores[indiceJugadorActual].nombre << " tenia cartas del color " << obtenerNombreColor(colorDescarte) << " y jugo ilegalmente.\n";
+                        std::cout << jugadores[indiceJugadorActual].nombre << " roba 2 cartas como penalizacion.\n";
+                        robarCarta(jugadores[indiceJugadorActual], mazo, 2);
+                    } else {
+                        // El jugador actual no tenía cartas del color, el retador pierde el desafío
+                        std::cout << jugadores[siguienteJugador].nombre << " desafio incorrectamente. ¡Debe robar 4 cartas!\n";
+                        robarCarta(jugadores[siguienteJugador], mazo, 4);
+                    }
+                } else {
+                    // Si no hay desafío, aplica el efecto normal
+                    robarCarta(jugadores[siguienteJugador], mazo, 2);
+                }
             }
 
             indiceJugadorActual = siguienteJugador;
@@ -357,10 +396,6 @@ void aplicarEfectoCartaEspecial(const Carta& cartaEspecial, int& indiceJugadorAc
                 }
             }
 
-            indiceJugadorActual = siguienteJugador;
-
-
-            // Cambiar al siguiente jugador
             indiceJugadorActual = siguienteJugador;
             break;
     }
