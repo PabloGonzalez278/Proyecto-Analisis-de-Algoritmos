@@ -258,6 +258,10 @@ void robarCarta(Jugador& jugador, std::vector<Carta>& mazo, int cantidad = 1, bo
 
         jugador.mano.push_back(cartaRobada);
 
+        // Verificar si el jugador es humano antes de mostrar la carta robada
+        if (!jugador.esSintetico) {
+            imprimirCarta(cartaRobada);
+        }
     }
 }
 
