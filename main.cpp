@@ -721,12 +721,18 @@ int main() {
             }
         }
 
-        // Configuración de jugadores
+ // Configuración de jugadores
         std::vector<Jugador> jugadores;
         int numJugadores;
 
         std::cout << "Introduce el numero de jugadores (2-10): ";
         std::cin >> numJugadores;
+
+        // Asegurarse de que el número de jugadores sea válido
+        while (numJugadores < 2 || numJugadores > 10) {
+            std::cout << "Numero de jugadores no valido. Debe ser entre 2 y 10. Intenta de nuevo: ";
+            std::cin >> numJugadores;
+        }
 
         for (int i = 0; i < numJugadores; ++i) {
             Jugador jugador;
